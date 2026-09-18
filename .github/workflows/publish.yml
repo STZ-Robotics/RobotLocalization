@@ -1,0 +1,43 @@
+name: Publish MARS Feature
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+        
+      - name: Build Javadoc and Maven Package
+
+        run: ./gradlew clean publish javadoc -x test
+        
+      - name: Combine Javadoc and Maven
+        run: |
+          # Creamos la carpeta de destino por si no existe
+          mkdir -p build/docs/javadoc
+          # Copiamos la carpeta 'maven' adentro del Javadoc
+          cp -r maven build/docs/javadoc/maven
+          # Copiamos el JSON del Feature para que la CLI de MARS lo encuentre
+          cp MarsFeature.json build/docs/javadoc/
+        
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: build/docs/javadoc
