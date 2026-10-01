@@ -1,0 +1,21 @@
+{
+  "author": "STZ-Robotics",
+  "description": "Localization for MARS: pose fusion with filtering and consensus, plus simulated Limelight and QuestNav with a NetworkTables bridge and SimDevice",
+  "featureId": "RobotLocalization",
+  "forgeMiniRequired": ">=1.1.0",
+  "groupId": "com.stzteam.features.robotlocalization",
+  "javaDependencies": [
+    {
+      "artifactId": "RobotLocalization",
+      "groupId": "com.stzteam.features.robotlocalization",
+      "isProcessor": false,
+      "version": "1.0.0"
+    }
+  ],
+  "marsCoreRequired": ">=1.6.0",
+  "mavenUrls": [
+    "https://stz-robotics.github.io/RobotLocalization/maven/"
+  ],
+  "name": "RobotLocalization",
+  "version": "1.0.0"
+}
