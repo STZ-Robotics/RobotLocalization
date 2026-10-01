@@ -5,3 +5,5 @@ build/
 *.log
 .vscode/
 src/main/java/com/stzteam/mars/generated/
+# Artefactos que deja el servidor de NetworkTables al correr los tests de simulacion
+networktables.json

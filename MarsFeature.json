@@ -1,6 +1,6 @@
 {
   "author": "STZ-Robotics",
-  "description": "Odometry utils for mars",
+  "description": "Localizacion para MARS: fusion de pose con filtros y consenso, mas Limelight y QuestNav simuladas con puente a NetworkTables y SimDevice",
   "featureId": "RobotLocalization",
   "forgeMiniRequired": ">=1.1.0",
   "groupId": "com.stzteam.features.robotlocalization",

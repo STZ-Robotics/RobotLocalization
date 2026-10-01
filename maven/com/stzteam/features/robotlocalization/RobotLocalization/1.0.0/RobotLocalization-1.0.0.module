@@ -1,0 +1,223 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "com.stzteam.features.robotlocalization",
+    "module": "RobotLocalization",
+    "version": "1.0.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.10.2"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "RobotLocalization-1.0.0.jar",
+          "url": "RobotLocalization-1.0.0.jar",
+          "size": 113473,
+          "sha512": "930906338d0dea84d5311ef738dafc4d213b62462fa0c8b1922aebd13f7fe28ec776abbe46b8110a7b1499921aa580a88300c8a723169ae6024992a60d0305fb",
+          "sha256": "53612fe703cbe0622edd669c6c0aeaf8fbc330bfa9f2f054d6020113340aa428",
+          "sha1": "c67a8eee1eab77117bac8f346773019465fcb967",
+          "md5": "3abc5262cd1b4126a8ea5691aa019b98"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "edu.wpi.first.wpilibj",
+          "module": "wpilibj-java",
+          "version": {
+            "requires": "2026.1.1"
+          }
+        },
+        {
+          "group": "edu.wpi.first.wpimath",
+          "module": "wpimath-java",
+          "version": {
+            "requires": "2026.1.1"
+          }
+        },
+        {
+          "group": "edu.wpi.first.ntcore",
+          "module": "ntcore-java",
+          "version": {
+            "requires": "2026.1.1"
+          }
+        },
+        {
+          "group": "edu.wpi.first.cscore",
+          "module": "cscore-java",
+          "version": {
+            "requires": "2026.1.1"
+          }
+        },
+        {
+          "group": "edu.wpi.first.cameraserver",
+          "module": "cameraserver-java",
+          "version": {
+            "requires": "2026.1.1"
+          }
+        },
+        {
+          "group": "edu.wpi.first.hal",
+          "module": "hal-java",
+          "version": {
+            "requires": "2026.1.1"
+          }
+        },
+        {
+          "group": "edu.wpi.first.wpinet",
+          "module": "wpinet-java",
+          "version": {
+            "requires": "2026.1.1"
+          }
+        },
+        {
+          "group": "edu.wpi.first.wpiutil",
+          "module": "wpiutil-java",
+          "version": {
+            "requires": "2026.1.1"
+          }
+        },
+        {
+          "group": "edu.wpi.first.apriltag",
+          "module": "apriltag-java",
+          "version": {
+            "requires": "2026.1.1"
+          }
+        },
+        {
+          "group": "edu.wpi.first.wpiunits",
+          "module": "wpiunits-java",
+          "version": {
+            "requires": "2026.1.1"
+          }
+        },
+        {
+          "group": "edu.wpi.first.epilogue",
+          "module": "epilogue-runtime-java",
+          "version": {
+            "requires": "2026.1.1"
+          }
+        },
+        {
+          "group": "edu.wpi.first.thirdparty.frc2025.opencv",
+          "module": "opencv-java",
+          "version": {
+            "requires": "4.10.0-3"
+          }
+        },
+        {
+          "group": "org.ejml",
+          "module": "ejml-simple",
+          "version": {
+            "requires": "0.44.0"
+          }
+        },
+        {
+          "group": "com.fasterxml.jackson.core",
+          "module": "jackson-annotations",
+          "version": {
+            "requires": "2.19.2"
+          }
+        },
+        {
+          "group": "com.fasterxml.jackson.core",
+          "module": "jackson-core",
+          "version": {
+            "requires": "2.19.2"
+          }
+        },
+        {
+          "group": "com.fasterxml.jackson.core",
+          "module": "jackson-databind",
+          "version": {
+            "requires": "2.19.2"
+          }
+        },
+        {
+          "group": "us.hebi.quickbuf",
+          "module": "quickbuf-runtime",
+          "version": {
+            "requires": "1.4"
+          }
+        },
+        {
+          "group": "edu.wpi.first.wpilibNewCommands",
+          "module": "wpilibNewCommands-java",
+          "version": {
+            "requires": "2026.1.1"
+          }
+        },
+        {
+          "group": "com.stzteam.forgemini",
+          "module": "ForgeMini",
+          "version": {
+            "requires": "[1.1.0,)"
+          }
+        },
+        {
+          "group": "com.stzteam.mars",
+          "module": "Mars",
+          "version": {
+            "requires": "[1.6.0,)"
+          }
+        },
+        {
+          "group": "org.photonvision",
+          "module": "photonlib-java",
+          "version": {
+            "requires": "v2026.1.1"
+          }
+        },
+        {
+          "group": "org.photonvision",
+          "module": "photontargeting-java",
+          "version": {
+            "requires": "v2026.1.1"
+          }
+        },
+        {
+          "group": "gg.questnav",
+          "module": "questnavlib-java",
+          "version": {
+            "requires": "2026-2.1.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "RobotLocalization-1.0.0.jar",
+          "url": "RobotLocalization-1.0.0.jar",
+          "size": 113473,
+          "sha512": "930906338d0dea84d5311ef738dafc4d213b62462fa0c8b1922aebd13f7fe28ec776abbe46b8110a7b1499921aa580a88300c8a723169ae6024992a60d0305fb",
+          "sha256": "53612fe703cbe0622edd669c6c0aeaf8fbc330bfa9f2f054d6020113340aa428",
+          "sha1": "c67a8eee1eab77117bac8f346773019465fcb967",
+          "md5": "3abc5262cd1b4126a8ea5691aa019b98"
+        }
+      ]
+    }
+  ]
+}
