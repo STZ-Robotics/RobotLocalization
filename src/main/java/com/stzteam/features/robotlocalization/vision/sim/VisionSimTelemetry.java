@@ -23,30 +23,30 @@ import java.util.Optional;
 import java.util.TreeSet;
 
 /**
- * Publica el mundo simulado como campo 3D, para verlo en AdvantageScope o en MARS Desktop.
+ * Publishes the simulated world as a 3D field, to view in AdvantageScope or in MARS Desktop.
  *
- * <p>PhotonVision ya mantiene un {@code Field2d} de depuracion, pero plano: pierde la altura de los
- * tags y la inclinacion de las camaras, que es justo lo que uno quiere mirar cuando esta peleando
- * con un montaje. Esta clase publica lo mismo en 3D, como topics {@code struct:Pose3d[]}, que es lo
- * que consumen los visores de campo tridimensional.
+ * <p>PhotonVision already maintains a debug {@code Field2d}, but a flat one: it loses the height of
+ * the tags and the tilt of the cameras, which is exactly what you want to look at when you are
+ * fighting a mount. This class publishes the same thing in 3D, as {@code struct:Pose3d[]} topics,
+ * which is what three-dimensional field viewers consume.
  *
- * <h2>Que publica</h2>
- * Bajo {@code VisionSim/<mundo>/}:
+ * <h2>What it publishes</h2>
+ * Under {@code VisionSim/<world>/}:
  *
  * <table>
- *   <caption>Topics publicados</caption>
- *   <tr><th>Topic</th><th>Tipo</th><th>Que es</th></tr>
- *   <tr><td>{@code robot}</td><td>{@code struct:Pose3d}</td><td>pose real del robot</td></tr>
- *   <tr><td>{@code cameras}</td><td>{@code struct:Pose3d[]}</td><td>donde esta cada camara</td></tr>
- *   <tr><td>{@code fieldTags}</td><td>{@code struct:Pose3d[]}</td><td>todos los AprilTags del campo</td></tr>
- *   <tr><td>{@code visionTargets}</td><td>{@code struct:Pose3d[]}</td><td>solo los que alguna camara esta viendo</td></tr>
+ *   <caption>Published topics</caption>
+ *   <tr><th>Topic</th><th>Type</th><th>What it is</th></tr>
+ *   <tr><td>{@code robot}</td><td>{@code struct:Pose3d}</td><td>the robot's real pose</td></tr>
+ *   <tr><td>{@code cameras}</td><td>{@code struct:Pose3d[]}</td><td>where each camera is</td></tr>
+ *   <tr><td>{@code fieldTags}</td><td>{@code struct:Pose3d[]}</td><td>every AprilTag on the field</td></tr>
+ *   <tr><td>{@code visionTargets}</td><td>{@code struct:Pose3d[]}</td><td>only the ones some camera is seeing</td></tr>
  * </table>
  *
- * <p>Los nombres llevan {@code tag}, {@code target} o {@code vision} a proposito: el visor 3D de
- * MARS Desktop detecta solo por esas palabras que un topic de poses es de vision y lo dibuja con el
- * icono correcto, sin configurar nada.
+ * <p>The names carry {@code tag}, {@code target} or {@code vision} on purpose: MARS Desktop's 3D
+ * viewer detects from those words alone that a pose topic is a vision one and draws it with the right
+ * icon, with nothing to configure.
  *
- * <h2>Uso</h2>
+ * <h2>Usage</h2>
  * <pre>{@code
  * private final VisionSimTelemetry telemetry = VisionSimTelemetry.forWorld("main");
  *
@@ -80,26 +80,26 @@ public class VisionSimTelemetry {
         visionTargetPublisher =
                 table.getStructArrayTopic("visionTargets", Pose3d.struct).publish();
 
-        // El Field2d plano de photonlib sigue siendo util para una vista cenital rapida en Glass.
+        // Photonlib's flat Field2d is still useful for a quick top-down view in Glass.
         SmartDashboard.putData("VisionSim/" + world.name() + "/field2d", world.debugField());
     }
 
     /**
-     * Devuelve la telemetria de un mundo, creandola la primera vez.
+     * Returns a world's telemetry, creating it the first time.
      *
-     * @param worldName nombre del mundo simulado, el mismo que usan las camaras.
-     * @return la telemetria de ese mundo.
+     * @param worldName the simulated world's name, the same one the cameras use.
+     * @return that world's telemetry.
      */
     public static synchronized VisionSimTelemetry forWorld(String worldName) {
         return forWorld(worldName, NetworkTableInstance.getDefault());
     }
 
     /**
-     * Devuelve la telemetria de un mundo sobre una instancia concreta de NetworkTables.
+     * Returns a world's telemetry on a specific NetworkTables instance.
      *
-     * @param worldName nombre del mundo simulado.
-     * @param instance  instancia de NetworkTables.
-     * @return la telemetria de ese mundo.
+     * @param worldName the simulated world's name.
+     * @param instance  the NetworkTables instance.
+     * @return that world's telemetry.
      */
     public static synchronized VisionSimTelemetry forWorld(
             String worldName, NetworkTableInstance instance) {
@@ -107,35 +107,35 @@ public class VisionSimTelemetry {
                 worldName,
                 name ->
                         new VisionSimTelemetry(
-                                // Si el mundo ya existe porque lo creo una camara, manda su layout y
-                                // este se ignora. Si no, se crea vacio con el campo por defecto y se
-                                // llena cuando aparezca la primera camara.
+                                // If the world already exists because a camera created it, its layout
+                                // wins and this one is ignored. Otherwise it is created empty with the
+                                // default field and fills up when the first camera shows up.
                                 VisionSimWorld.get(name, FieldLayouts.defaultField()),
                                 instance));
     }
 
     /**
-     * Publica todos los mundos que tengan telemetria creada.
+     * Publishes every world that has telemetry created.
      *
-     * @return cuantos mundos se publicaron.
+     * @return how many worlds were published.
      */
     public static synchronized int publishAll() {
         INSTANCES.values().forEach(VisionSimTelemetry::publish);
         return INSTANCES.size();
     }
 
-    /** Olvida todas las telemetrias creadas. Pensado para tests. */
+    /** Forgets every telemetry created. Meant for tests. */
     public static synchronized void reset() {
         INSTANCES.values().forEach(VisionSimTelemetry::close);
         INSTANCES.clear();
     }
 
-    /** Publica el estado actual del mundo. Llamalo una vez por ciclo de simulacion. */
+    /** Publishes the world's current state. Call it once per simulation cycle. */
     public void publish() {
         robotPublisher.set(world.sim().getRobotPose());
         cameraPublisher.set(cameraPoses());
 
-        // Los tags del campo no se mueven: publicarlos una vez basta y ahorra un array por ciclo.
+        // The field tags do not move: publishing them once is enough and saves an array per cycle.
         if (!fieldTagsPublished) {
             fieldTagPublisher.set(fieldTagPoses());
             fieldTagsPublished = true;
@@ -161,12 +161,12 @@ public class VisionSimTelemetry {
     }
 
     /**
-     * Poses de los tags que alguna camara de este mundo esta viendo ahora mismo.
+     * Poses of the tags some camera in this world is seeing right now.
      *
-     * <p>Se reconstruyen desde los ids que reporta cada camara simulada y no desde el
-     * {@code Field2d} de photonlib, que solo guarda poses planas. La union se hace sobre un conjunto
-     * ordenado para que dos camaras que miran el mismo tag no lo dibujen dos veces y para que el
-     * orden no baile entre ciclos.
+     * <p>They are reconstructed from the ids each simulated camera reports and not from photonlib's
+     * {@code Field2d}, which only keeps flat poses. The union is taken over a sorted set so two
+     * cameras looking at the same tag do not draw it twice and so the order does not jump between
+     * cycles.
      */
     private Pose3d[] visibleTagPoses() {
         TreeSet<Integer> visibleIds = new TreeSet<>();
@@ -202,12 +202,12 @@ public class VisionSimTelemetry {
         return poses.toArray(EMPTY);
     }
 
-    /** @return el mundo que esta publicando. */
+    /** @return the world it is publishing. */
     public VisionSimWorld world() {
         return world;
     }
 
-    /** Cierra los publicadores. */
+    /** Closes the publishers. */
     public void close() {
         robotPublisher.close();
         cameraPublisher.close();
@@ -216,10 +216,10 @@ public class VisionSimTelemetry {
     }
 
     /**
-     * Atajo para publicar todo lo simulado de un ciclo: avanza camaras y headsets con la pose dada y
-     * publica la telemetria 3D.
+     * A shortcut to publish everything simulated in a cycle: advances cameras and headsets with the
+     * given pose and publishes the 3D telemetry.
      *
-     * @param simulatedRobotPose pose simulada del robot.
+     * @param simulatedRobotPose the robot's simulated pose.
      */
     public static void periodicAll(Pose3d simulatedRobotPose) {
         SimulatedLimelight.periodicAll(simulatedRobotPose);

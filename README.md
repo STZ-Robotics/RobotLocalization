@@ -1,6 +1,6 @@
 # RobotLocalization
 
-Localización para MARS: fusión de pose con filtros y consenso, más Limelight y QuestNav simuladas con puente a NetworkTables y SimDevice.
+Localization for MARS: pose fusion with filtering and consensus, plus simulated Limelight and QuestNav with a NetworkTables bridge and SimDevice.
 
 | | |
 |---|---|
@@ -13,15 +13,15 @@ Localización para MARS: fusión de pose con filtros y consenso, más Limelight 
 
 ---
 
-## Limelight simulada
+## Simulated Limelight
 
-Paquete `com.stzteam.features.robotlocalization.vision.sim`.
+Package `com.stzteam.features.robotlocalization.vision.sim`.
 
-PhotonVision genera las detecciones (`VisionSystemSim` + `PhotonCameraSim` contra el `AprilTagFieldLayout` oficial) y esta feature las traduce al esquema de NetworkTables que publica un Limelight real. El robot code de producción no cambia ni una línea: si tu subsistema lee `LimelightHelpers.getTX("limelight-front")` contra hardware, lee lo mismo contra la simulación.
+PhotonVision generates the detections (`VisionSystemSim` + `PhotonCameraSim` against the official `AprilTagFieldLayout`) and this feature translates them into the NetworkTables schema a real Limelight publishes. Production robot code does not change a single line: if your subsystem reads `LimelightHelpers.getTX("limelight-front")` against hardware, it reads the same thing against the simulation.
 
-Todo corre dentro del proceso del robot. No hay bridge externo ni HALSim WebSocket.
+Everything runs inside the robot process. There is no external bridge and no HALSim WebSocket.
 
-### Uso
+### Usage
 
 ```java
 public class Robot extends TimedRobot {
@@ -41,45 +41,45 @@ public class Robot extends TimedRobot {
 }
 ```
 
-Con varias cámaras, `SimulatedLimelight.periodicAll(pose)` las avanza todas de golpe; comparten un solo `VisionSystemSim` mientras declaren el mismo mundo (`withVisionWorld`).
+With several cameras, `SimulatedLimelight.periodicAll(pose)` advances them all at once; they share a single `VisionSystemSim` as long as they declare the same world (`withVisionWorld`).
 
-En robot real el constructor detecta `RobotBase.isReal()` y no crea nada — ni `VisionSystemSim`, ni `SimDevice`, ni entries de NT. `periodic()` retorna de inmediato, así que puedes dejar la instancia declarada sin coste en competencia.
+On a real robot the constructor detects `RobotBase.isReal()` and creates nothing — no `VisionSystemSim`, no `SimDevice`, no NT entries. `periodic()` returns immediately, so you can leave the instance declared at no cost during competition.
 
-### Qué publica
+### What it publishes
 
-| Key | Origen |
+| Key | Source |
 |---|---|
-| `tv` | `1.0` si hay targets tras aplicar filtros de id |
-| `tx` / `ty` | `-getYaw()` / `getPitch()` del mejor target — Photon usa positivo-izquierda, Limelight positivo-derecha |
-| `txnc` / `tync` | iguales a `tx`/`ty`: no se modela un crosshair movible |
-| `ta` | `getArea()`, porcentaje 0-100 en ambas convenciones |
+| `tv` | `1.0` if there are targets after applying the id filters |
+| `tx` / `ty` | `-getYaw()` / `getPitch()` of the best target — Photon uses positive-left, Limelight positive-right |
+| `txnc` / `tync` | equal to `tx`/`ty`: a movable crosshair is not modelled |
+| `ta` | `getArea()`, a 0-100 percentage in both conventions |
 | `ts` | `getSkew()` |
-| `tid` | `getFiducialId()`, o `-1` sin target |
-| `tl` / `cl` | latencia real del frame en `tl`; `cl` es `0` (photonlib no separa captura de pipeline, y lo que importa para fechar la medición es el total) |
-| `hb` | heartbeat, incrementa por frame |
-| `t2d` | los 17 valores de targeting, con las métricas en píxeles derivadas del min-area rect |
-| `rawfiducials` | 7 valores por tag visible |
-| `botpose` / `botpose_wpiblue` / `botpose_wpired` | MegaTag1: PnP multi-tag si hay dos o más tags, si no el de menor ambigüedad. Formato completo `11 + 7·tagCount` |
-| `botpose_orb*` | MegaTag2: PnP restringido fijando el yaw de `robot_orientation_set` |
-| `getpipe` / `getpipetype` | eco del pipeline pedido |
-| `tcornxy` | opcional, `withCorners(true)` |
-| `targetpose_*` / `camerapose_*` | opcional, `withTargetSpacePoses(true)` — ver más abajo |
+| `tid` | `getFiducialId()`, or `-1` with no target |
+| `tl` / `cl` | the frame's real latency in `tl`; `cl` is `0` (photonlib does not separate capture from pipeline, and what matters for dating the measurement is the total) |
+| `hb` | heartbeat, incremented per frame |
+| `t2d` | the 17 targeting values, with the pixel metrics derived from the min-area rect |
+| `rawfiducials` | 7 values per visible tag |
+| `botpose` / `botpose_wpiblue` / `botpose_wpired` | MegaTag1: multi-tag PnP if there are two or more tags, otherwise the least ambiguous one. Full `11 + 7·tagCount` format |
+| `botpose_orb*` | MegaTag2: constrained PnP pinning the yaw from `robot_orientation_set` |
+| `getpipe` / `getpipetype` | echo of the requested pipeline |
+| `tcornxy` | optional, `withCorners(true)` |
+| `targetpose_*` / `camerapose_*` | optional, `withTargetSpacePoses(true)` — see below |
 
-Y **lee** lo que el robot code escribe: `pipeline`, `ledMode`, `throttle_set`, `robot_orientation_set`, `fiducial_id_filters_set` y `camerapose_robotspace_set`. O sea que `SetRobotOrientation`, `SetFiducialIDFiltersOverride` y `setCameraPose_RobotSpace` tienen efecto real en la simulación.
+And it **reads** what the robot code writes: `pipeline`, `ledMode`, `throttle_set`, `robot_orientation_set`, `fiducial_id_filters_set` and `camerapose_robotspace_set`. Which means `SetRobotOrientation`, `SetFiducialIDFiltersOverride` and `setCameraPose_RobotSpace` have a real effect in simulation.
 
-### Fuera de alcance en esta iteración
+### Out of scope in this iteration
 
-- La key `json` (`LimelightHelpers.getLatestResults`). Usa los getters directos.
-- Pipelines de detector neuronal (`tclass`, `rawdetections`).
-- `targetpose_*` / `camerapose_*` vienen **apagadas por defecto**. La convención de target space de Limelight (X derecha, Y abajo, Z saliendo) es la parte del esquema más fácil de interpretar mal, y es preferible que esas keys se queden vacías de forma obvia a que publiquen números plausibles pero equivocados. Si las enciendes, valida los signos contra tu hardware antes de confiar en ellas.
+- The `json` key (`LimelightHelpers.getLatestResults`). Use the direct getters.
+- Neural detector pipelines (`tclass`, `rawdetections`).
+- `targetpose_*` / `camerapose_*` are **off by default**. Limelight's target-space convention (X right, Y down, Z outward) is the part of the schema easiest to misread, and those keys staying obviously empty is preferable to them publishing plausible but wrong numbers. If you switch them on, validate the signs against your hardware before trusting them.
 
 ### Sim GUI
 
-Cada cámara se registra como `Limelight:<nombre>[n]`, así que aparece sola bajo el nodo **Limelight** en *Other Devices*, igual que los `CANMotor:TalonFX[n]` de CTRE. No hay código de GUI.
+Each camera registers as `Limelight:<name>[n]`, so it shows up on its own under the **Limelight** node in *Other Devices*, just like CTRE's `CANMotor:TalonFX[n]`. There is no GUI code.
 
-El campo `Force No Targets` es de entrada (`kInput`): márcalo desde el Sim GUI y la cámara finge no ver nada, sin mover el robot. Útil para probar qué hace tu código cuando pierde el tag.
+The `Force No Targets` field is an input (`kInput`): tick it from the Sim GUI and the camera pretends to see nothing, without moving the robot. Useful to test what your code does when it loses the tag.
 
-Desde tests o desde otra clase:
+From tests or from another class:
 
 ```java
 var sim = new SimDeviceSim("Limelight:limelight-front", 0);
@@ -87,32 +87,32 @@ double tx = sim.getDouble("tx").get();
 sim.getBoolean("Force No Targets").set(true);
 ```
 
-### Checklist de validación con hardware
+### Hardware validation checklist
 
-Lo que los tests ya cubren (`./gradlew test`): keys y formatos de array, convenciones de signo de `tx`/`ty`, orígenes azul/rojo/centro, el pipeline completo Photon → NT contra un tag real del campo, el `SimDevice` y MegaTag2.
+What the tests already cover (`./gradlew test`): keys and array formats, the sign conventions of `tx`/`ty`, the blue/red/centre origins, the full Photon → NT pipeline against a real field tag, the `SimDevice` and MegaTag2.
 
-Lo que conviene verificar contra un Limelight físico antes de confiar a ciegas:
+What is worth verifying against a physical Limelight before trusting it blindly:
 
-- [ ] Signos de `tx`/`ty` contra la documentación oficial de Limelight, no solo contra la de Photon.
-- [ ] Convención de `camerapose_robotspace_set`: aquí se interpreta como `[adelante, izquierda, arriba, roll, pitch, yaw]` en convención WPILib.
-- [ ] Las keys de target space, si las enciendes.
-- [ ] Perfiles de cámara (`limelight2/3/3G/4`): son aproximaciones de las specs publicadas, no calibraciones. Con la calibración real, pásala con `withCameraProperties(...)`.
+- [ ] The signs of `tx`/`ty` against Limelight's official documentation, not only against Photon's.
+- [ ] The convention of `camerapose_robotspace_set`: here it is interpreted as `[forward, left, up, roll, pitch, yaw]` in the WPILib convention.
+- [ ] The target-space keys, if you switch them on.
+- [ ] The camera profiles (`limelight2/3/3G/4`): they are approximations of the published specs, not calibrations. With the real calibration, pass it with `withCameraProperties(...)`.
 
 ### TODO
 
-Ruido gaussiano configurable por el usuario, oclusión entre tags, y modelado de crosshair movible para separar `tx` de `txnc`.
+User-configurable Gaussian noise, occlusion between tags, and modelling a movable crosshair to separate `tx` from `txnc`.
 
 ---
 
-## QuestNav simulada
+## Simulated QuestNav
 
-Paquete `com.stzteam.features.robotlocalization.vio.sim`.
+Package `com.stzteam.features.robotlocalization.vio.sim`.
 
-Hace de headset: publica en NetworkTables exactamente lo que publica un Meta Quest con QuestNav, así que el robot code que usa `gg.questnav.questnav.QuestNav` funciona sin cambios y sin hardware. Es la contraparte de la Limelight — allí hacemos de cámara.
+It stands in for the headset: it publishes to NetworkTables exactly what a Meta Quest running QuestNav publishes, so robot code using `gg.questnav.questnav.QuestNav` works unchanged and without hardware. It is the counterpart of the Limelight — there we stand in for the camera.
 
-Hoy no existía forma de simularlo: el "Robot Sim Example" oficial de QuestNav es robot code que corre en el simulador de WPILib **contra un headset real**. Sin headset, `isConnected()` devuelve false y el subsistema entero queda muerto.
+Until now there was no way to simulate it: QuestNav's official "Robot Sim Example" is robot code running in the WPILib simulator **against a real headset**. With no headset, `isConnected()` returns false and the whole subsystem is dead.
 
-### Uso
+### Usage
 
 ```java
 public class Robot extends TimedRobot {
@@ -127,54 +127,54 @@ public class Robot extends TimedRobot {
 }
 ```
 
-El `Transform3d` es el mismo `ROBOT_TO_QUEST` que le pasas a tu subsistema real.
+The `Transform3d` is the same `ROBOT_TO_QUEST` you pass to your real subsystem.
 
-### Qué hace distinto a una cámara simulada
+### What makes it different from a simulated camera
 
-Una Limelight ve el tag o no lo ve. Un Quest **siempre** reporta una pose; lo que cambia es cuánto miente. Por eso el contenido real de la feature está en `VioErrorModel`, no en la geometría:
+A Limelight either sees the tag or it does not. A Quest **always** reports a pose; what changes is how much it lies. That is why the feature's real content lives in `VioErrorModel`, not in the geometry:
 
-- **Deriva** escalada por distancia recorrida, no por tiempo — un robot parado no deriva. El yaw deriva por rotación acumulada.
-- **Pérdida de features** (poca luz, reflejos, superficies uniformes). La documentación de QuestNav avisa de que el headset puede re-adquirir *con un offset*: al recuperar, **la pose vuelve desplazada**. Ese salto es el que rompe a un pose estimator afinado.
-- **Doble-tap a passthrough por vibración**: salto de pose **sin** perder tracking. Más traicionero, porque `isTracking` sigue en true.
-- **Batería crítica**: el headset se apaga solo a media match.
-- **Caída de red**: se deja de publicar y `isConnected()` cae a los 120 ms.
+- **Drift** scaled by distance travelled, not by time — a stationary robot does not drift. The yaw drifts with accumulated rotation.
+- **Feature loss** (low light, reflections, uniform surfaces). QuestNav's documentation warns that the headset may re-acquire *with an offset*: on recovery, **the pose comes back displaced**. That jump is what breaks a finely tuned pose estimator.
+- **Vibration-induced double-tap to passthrough**: a pose jump **without** losing tracking. More treacherous, because `isTracking` stays true.
+- **Critical battery**: the headset shuts itself off mid-match.
+- **Network drop**: publishing stops and `isConnected()` falls after 120 ms.
 
-Los tres primeros se disparan desde el Sim GUI (`Force Tracking Loss`, `Force Pose Jump`, `Force Link Loss`) o desde código con `injectTrackingLoss(...)`, `injectPoseDiscontinuity(...)`, `injectLinkLoss(...)`. Además, un frenazo brusco tira el tracking solo.
+The first three are triggered from the Sim GUI (`Force Tracking Loss`, `Force Pose Jump`, `Force Link Loss`) or from code with `injectTrackingLoss(...)`, `injectPoseDiscontinuity(...)`, `injectLinkLoss(...)`. On top of that, a hard stop drops tracking on its own.
 
-Los valores por defecto son **plausibles, no medidos**. Si tienes logs de tu headset, ajústalos.
+The default values are **plausible, not measured**. If you have logs from your headset, tune them.
 
-### El origen del Quest
+### The Quest's origin
 
-Un Quest **no publica poses de campo**. Publica su pose en un origen propio y arbitrario, el sitio donde estaba cuando arrancó la app; que coincida con el del campo es algo que el robot code tiene que provocar llamando a `setPose()`. La simulación lo respeta, y `withRandomizedOrigin(true)` te obliga a hacerlo bien: con el origen en identidad, un equipo que nunca llama a `setPose()` ve poses correctas por accidente y el bug no aparece hasta encender el headset de verdad.
+A Quest **does not publish field poses**. It publishes its pose in an arbitrary origin of its own, the place where it was when the app started; making that coincide with the field's is something the robot code has to cause by calling `setPose()`. The simulation honours that, and `withRandomizedOrigin(true)` forces you to get it right: with the origin at identity, a team that never calls `setPose()` sees correct poses by accident and the bug does not show up until they switch the real headset on.
 
-### Cuidado con `dataTimestamp()`
+### Mind `dataTimestamp()`
 
-Por defecto se publica en la misma instancia de NetworkTables que consume el robot code, y en ese caso `PoseFrame.dataTimestamp()` **no sirve**: vale 1 µs constante. No es un fallo de esta feature sino de la topología — ese valor sale del `serverTime` que asigna el servidor NT **al recibir**, y ntcore marca con el centinela `serverTime = 1` todo lo que se publica localmente.
+By default publication happens on the same NetworkTables instance the robot code consumes, and in that case `PoseFrame.dataTimestamp()` is **useless**: it is a constant 1 µs. That is not a bug in this feature but in the topology — that value comes from the `serverTime` the NT server assigns **on receipt**, and ntcore marks everything published locally with the sentinel `serverTime = 1`.
 
-Si tu robot code fusiona por timestamp, que es el caso normal de un pose estimator, enciende `withNetworkClient(true)`: la simulación pasa a publicar como cliente NT4 contra el servidor del robot, igual que el headset real, y los timestamps salen correctos. Va apagado por defecto porque si no hay un servidor NT4 escuchando, el cliente no conecta y no se publica nada — publicar con timestamps pobres es un fallo degradado, no publicar es un fallo total.
+If your robot code fuses on timestamps, which is the normal case for a pose estimator, switch on `withNetworkClient(true)`: the simulation then publishes as an NT4 client against the robot's server, just like the real headset, and the timestamps come out correct. It is off by default because if there is no NT4 server listening, the client does not connect and nothing gets published — publishing with poor timestamps is a degraded failure, publishing nothing is a total one.
 
-### Visor
+### Viewfinder
 
-`withViewfinder(true)` monta una `PhotonCameraSim` donde va el headset y publica un stream MJPEG con el wireframe del campo desde su punto de vista.
+`withViewfinder(true)` mounts a `PhotonCameraSim` where the headset goes and publishes an MJPEG stream with the field wireframe from its point of view.
 
-**Es cosmético.** El Quest no localiza viendo AprilTags: hace odometría visual-inercial sobre las features naturales del entorno. La imagen no alimenta nada; sirve para ver si el headset queda mirando a la pared o si el ángulo de montaje es el que creías. Apagado por defecto: renderiza con OpenCV en cada frame.
+**It is cosmetic.** The Quest does not localise by seeing AprilTags: it does visual-inertial odometry on the environment's natural features. The image feeds nothing; it is there to show whether the headset ends up facing the wall or whether the mounting angle is the one you thought. Off by default: it renders with OpenCV on every frame.
 
-Lo mismo está disponible en la Limelight con `withRawStream(true)`, `withWireframe(true)`, `withProcessedStream(true)` y `withDebugField(true)`.
+The same is available on the Limelight with `withRawStream(true)`, `withWireframe(true)`, `withProcessedStream(true)` and `withDebugField(true)`.
 
-### Fuera de alcance
+### Out of scope
 
-- Integración con **SimulationStudio / Gazebo**. El bridge publica la pose de verdad de la física en `/MARS/Sim/truthPose3d`, que es justo lo que `periodic(Pose3d)` necesita, pero leerla se deja para después. Nota: el protocolo 0.1.0 de SimulationStudio deja cámaras y visión explícitamente fuera de alcance, así que el visor de photonlib es lo único que da imagen hoy.
-- El comando `POSE_RESET` es el único del protocolo; cualquier otro se contesta con error.
+- Integration with **SimulationStudio / Gazebo**. The bridge publishes the physics' ground-truth pose to `/MARS/Sim/truthPose3d`, which is exactly what `periodic(Pose3d)` needs, but reading it is left for later. Note: SimulationStudio's 0.1.0 protocol leaves cameras and vision explicitly out of scope, so photonlib's viewfinder is the only thing that gives an image today.
+- The `POSE_RESET` command is the only one in the protocol; any other is answered with an error.
 
 ---
 
-## Fusión de pose
+## Pose fusion
 
-Paquete `com.stzteam.features.robotlocalization.fusion`.
+Package `com.stzteam.features.robotlocalization.fusion`.
 
-Las dos secciones de arriba simulan sensores. Esta es la otra mitad: **qué hace el robot con esas mediciones**. `PoseFusion` no es un estimador — ese ya lo trae WPILib — es el **portero** que decide cuáles llegan a `addVisionMeasurement`.
+The two sections above simulate sensors. This is the other half: **what the robot does with those measurements**. `PoseFusion` is not an estimator — WPILib already ships one — it is the **gatekeeper** that decides which measurements reach `addVisionMeasurement`.
 
-### Uso
+### Usage
 
 ```java
 private final PoseFusion fusion = new PoseFusion(
@@ -183,7 +183,7 @@ private final PoseFusion fusion = new PoseFusion(
                 () -> drivetrain.getState().Pose.getRotation(),
                 () -> DegreesPerSecond.of(...),
                 () -> drivetrain.getState().Speeds,
-                null,                                   // sin acelerómetro
+                null,                                   // no accelerometer
                 () -> drivetrain.getState().Pose))
     .registerSource(LimelightPoseSource.megaTag2("limelight-front"))
     .registerSource(QuestNavPoseSource.create("quest", ROBOT_TO_QUEST));
@@ -194,39 +194,39 @@ public void periodic() {
 }
 ```
 
-### Los filtros
+### The filters
 
-Se aplican en cascada, de barato a caro y de local a global. Una fuente descartada por entorno ni siquiera gasta la lectura del hardware.
+They are applied in a cascade, from cheap to expensive and from local to global. A source discarded on environment does not even spend the hardware read.
 
-| Filtro | Qué descarta |
+| Filter | What it discards |
 |---|---|
-| Encendida | Fuentes apagadas desde código o desde el dashboard |
-| Entorno | Robot girando, acelerando o moviéndose más rápido de lo que la medición aguanta |
-| Timestamp | Mediciones que no son más nuevas que la última aceptada |
-| Pose válida | Lo que la subclase considere absurdo, típicamente fuera del campo |
-| Ambigüedad | Soluciones de PnP con dos interpretaciones casi igual de buenas |
-| Consenso | Lo que otra fuente contradice |
-| Mahalanobis | Lo que está demasiado lejos de lo que el estimator ya cree |
+| Enabled | Sources disabled from code or from the dashboard |
+| Environment | A robot turning, accelerating or moving faster than the measurement can take |
+| Timestamp | Measurements that are not newer than the last accepted one |
+| Valid pose | Whatever the subclass considers absurd, typically outside the field |
+| Ambiguity | PnP solutions with two almost equally good interpretations |
+| Consensus | Whatever another source contradicts |
+| Mahalanobis | Whatever is too far from what the estimator already believes |
 
-Cada fuente publica en NetworkTables **por qué** se descartó su última medición (`RejectionReason`). Sin eso, un filtro mal calibrado y una cámara rota se ven exactamente igual desde la pista.
+Each source publishes to NetworkTables **why** its last measurement was discarded (`RejectionReason`). Without that, a badly calibrated filter and a broken camera look exactly the same from the field.
 
-### Consenso
+### Consensus
 
-Una sola cámara que reporte una pose absurda pasa cualquier filtro individual: es geométricamente válida, la ambigüedad es baja y el robot está quieto. Lo único que la delata es que **otra fuente dice algo distinto**.
+A single camera reporting an absurd pose passes every individual filter: it is geometrically valid, the ambiguity is low and the robot is standing still. The only thing that gives it away is that **another source says something different**.
 
-Dos modos: `REJECT_BOTH` (lo prudente con dos fuentes — sin una tercera que desempate no hay forma de saber cuál miente) y `MAJORITY_VOTE`, que cuenta con cuántas concuerda cada una y se queda con las más respaldadas.
+Two modes: `REJECT_BOTH` (the prudent choice with two sources — with no third one to break the tie there is no way to tell which is lying) and `MAJORITY_VOTE`, which counts how many each one agrees with and keeps the best-supported ones.
 
-La tolerancia **se ensancha con la velocidad**: dos mediciones tomadas con 0.1 s de diferencia describen posiciones distintas si el robot se movió en medio, y eso no es un desacuerdo. A 4 m/s son 0.4 m, comparable a la tolerancia entera.
+The tolerance **widens with speed**: two measurements taken 0.1 s apart describe different positions if the robot moved in between, and that is not a disagreement. At 4 m/s that is 0.4 m, comparable to the whole tolerance.
 
 ### Mahalanobis
 
-Descarta lo que esté demasiado lejos de lo que el estimator ya cree, medido en sigmas. La clave es que la incertidumbre con la que se compara **crece con el tiempo** desde la última medición aceptada: si una fuente lleva diez segundos callada, el estimator pudo haberse ido de sitio, y la puerta se abre para dejar que lo corrija. Sin eso el filtro se queda cerrado para siempre.
+It discards whatever is too far from what the estimator already believes, measured in sigmas. The key is that the uncertainty it compares against **grows with time** since the last accepted measurement: if a source has been quiet for ten seconds, the estimator may have wandered off, and the gate opens up to let it be corrected. Without that the filter stays shut forever.
 
-La primera medición se acepta siempre: no hay contra qué compararla.
+The first measurement is always accepted: there is nothing to compare it against.
 
-### Desviaciones estándar
+### Standard deviations
 
-`StdDevStrategies` es la librería de funciones `(distancia, tagCount) → [σx, σy, σθ]`, componibles:
+`StdDevStrategies` is the library of `(distance, tagCount) → [σx, σy, σθ]` functions, composable:
 
 ```java
 source.setStdDevsStrategy(
@@ -237,21 +237,21 @@ source.setStdDevsStrategy(
         0.02, 4.0, 0.02, 10.0));
 ```
 
-**Acota siempre el resultado final.** Las estrategias multiplicativas no tienen techo propio, y un valor desbocado rompe la inversión de matrices del filtro de Kalman por dentro, sin un error que diga qué pasó.
+**Always bound the final result.** Multiplicative strategies have no ceiling of their own, and a runaway value breaks the Kalman filter's matrix inversion from the inside, with no error to say what happened.
 
-Para un VIO la estrategia es distinta: su error no depende de la distancia a nada, sino de cuánto lleva sin que lo corrijan. `vioTimeDrift` devuelve un objeto con `reset()`, que hay que llamar tras cada `POSE_RESET` — si no, sigue inflando la incertidumbre para siempre y el estimator termina ignorando un sensor que acaba de quedar perfecto.
+For a VIO the strategy is different: its error does not depend on the distance to anything, but on how long it has gone without being corrected. `vioTimeDrift` returns an object with `reset()`, which has to be called after each `POSE_RESET` — otherwise it keeps inflating the uncertainty forever and the estimator ends up ignoring a sensor that has just become perfect.
 
-### Las dos fuentes concretas
+### The two concrete sources
 
-`LimelightPoseSource` lee NetworkTables directamente, sin `LimelightHelpers` — esa clase es un archivo que se copia, no un artefacto Maven, y no hace falta porque el esquema lo conocemos: lo escribe el simulador de esta misma feature. Soporta MegaTag1 y MegaTag2, y **le escribe el rumbo al Limelight sola**, que es el paso que más se olvida y el que hace que MegaTag2 devuelva ceros sin explicar por qué.
+`LimelightPoseSource` reads NetworkTables directly, without `LimelightHelpers` — that class is a file you copy, not a Maven artifact, and it is not needed because we know the schema: this feature's own simulator writes it. It supports MegaTag1 and MegaTag2, and **writes the heading to the Limelight on its own**, which is the step most often forgotten and the one that makes MegaTag2 return zeros without explaining why.
 
-`QuestNavPoseSource` envuelve el `QuestNav` del vendordep, deshace `ROBOT_TO_QUEST` y descarta lo que llegue sin tracking. También detecta el `dataTimestamp` centinela de 1 µs y avisa una vez en vez de meterle al estimator mediciones mal fechadas.
+`QuestNavPoseSource` wraps the vendordep's `QuestNav`, undoes `ROBOT_TO_QUEST` and discards whatever arrives without tracking. It also detects the 1 µs sentinel `dataTimestamp` and warns once instead of feeding the estimator mis-dated measurements.
 
-### El campo 3D
+### The 3D field
 
-`VisionSimTelemetry.forWorld("main").publish()` publica el mundo simulado como topics `struct:Pose3d[]`: la pose del robot, dónde está cada cámara, todos los AprilTags del campo y cuáles se están viendo ahora. Se ve en AdvantageScope o en el visor 3D de MARS Desktop, que detecta solo por el nombre del topic que son poses de visión.
+`VisionSimTelemetry.forWorld("main").publish()` publishes the simulated world as `struct:Pose3d[]` topics: the robot's pose, where each camera is, every AprilTag on the field and which ones are being seen right now. It shows up in AdvantageScope or in MARS Desktop's 3D viewer, which detects from the topic name alone that these are vision poses.
 
-El `Field2d` plano de photonlib sigue publicándose también, para una vista cenital rápida en Glass.
+Photonlib's flat `Field2d` keeps being published too, for a quick top-down view in Glass.
 
 ---
 
@@ -273,7 +273,7 @@ This feature compiles against the vendor libraries below. The robot project that
 - **PhotonLib** — `org.photonvision:photonlib-java:v2026.1.1`, `org.photonvision:photontargeting-java:v2026.1.1`
 - **QuestNavLib** — `gg.questnav:questnavlib-java:2026-2.1.0`
 
-El proyecto de robot necesita el vendordep de PhotonVision (`vendordeps/photonlib.json`), no solo las coordenadas Maven: las nativas de `photontargeting` hacen falta en runtime para la simulación. QuestNav es Java puro, sin nativas.
+The robot project needs PhotonVision's vendordep (`vendordeps/photonlib.json`), not just the Maven coordinates: the `photontargeting` natives are required at runtime for the simulation. QuestNav is pure Java, with no natives.
 
 ## Publish / update
 
@@ -297,31 +297,31 @@ Publishing is a `git push`: `.github/workflows/publish.yml` builds the jar into 
 
 ## Code layout
 
-- `vision/sim/SimulatedLimelight.java` — API pública de la cámara simulada.
-- `vision/sim/LimelightSimConfig.java` — configuración (tabla NT, óptica, qué keys publicar).
+- `vision/sim/SimulatedLimelight.java` — public API of the simulated camera.
+- `vision/sim/LimelightSimConfig.java` — configuration (NT table, optics, which keys to publish).
 - `vision/sim/LimelightTargetTranslator.java` — `PhotonPipelineResult` → `LimelightFrame`.
-- `vision/sim/LimelightNTPublisher.java` — escribe el esquema NT y lee las keys de entrada.
-- `vision/sim/LimelightSimDevice.java` — registra el `SimDevice` de HAL.
-- `vision/sim/LimelightCoordinates.java` — todas las conversiones de convención, con tests.
-- `vision/sim/VisionSimWorld.java` — registro de mundos `VisionSystemSim` compartidos.
-- `vio/sim/SimulatedQuestNav.java` — API pública del headset simulado.
-- `vio/sim/VioErrorModel.java` — deriva y modos de fallo del VIO. El contenido real de esa feature.
-- `vio/sim/QuestOriginFrame.java` — origen del headset y `POSE_RESET`, con tests.
-- `vio/sim/QuestNavNTBridge.java` — publica los topics protobuf y atiende los comandos.
-- `vio/sim/QuestNavSimDevice.java` — `SimDevice` con los interruptores de fallo.
-- `fusion/PoseFusion.java` — el portero que filtra las mediciones de visión.
-- `fusion/PoseSource.java` — una fuente de mediciones; los filtros viven aquí.
-- `fusion/ConsensusGate.java` — arbitraje entre fuentes que se contradicen, con tests.
-- `fusion/StdDevStrategies.java` — cómo calcular la confianza de cada medición.
-- `fusion/LimelightPoseSource.java` / `fusion/QuestNavPoseSource.java` — las dos fuentes concretas.
-- `vision/LimelightBotpose.java` — el formato de `botpose`, compartido entre el simulador y el lector.
-- `RobotLocalization.java` — entry point de la feature.
+- `vision/sim/LimelightNTPublisher.java` — writes the NT schema and reads the input keys.
+- `vision/sim/LimelightSimDevice.java` — registers the HAL `SimDevice`.
+- `vision/sim/LimelightCoordinates.java` — every convention conversion, with tests.
+- `vision/sim/VisionSimWorld.java` — registry of shared `VisionSystemSim` worlds.
+- `vio/sim/SimulatedQuestNav.java` — public API of the simulated headset.
+- `vio/sim/VioErrorModel.java` — the VIO's drift and failure modes. The real content of that feature.
+- `vio/sim/QuestOriginFrame.java` — the headset's origin and `POSE_RESET`, with tests.
+- `vio/sim/QuestNavNTBridge.java` — publishes the protobuf topics and services the commands.
+- `vio/sim/QuestNavSimDevice.java` — `SimDevice` with the failure switches.
+- `fusion/PoseFusion.java` — the gatekeeper that filters the vision measurements.
+- `fusion/PoseSource.java` — a measurement source; the filters live here.
+- `fusion/ConsensusGate.java` — arbitration between sources that contradict each other, with tests.
+- `fusion/StdDevStrategies.java` — how to compute the confidence of each measurement.
+- `fusion/LimelightPoseSource.java` / `fusion/QuestNavPoseSource.java` — the two concrete sources.
+- `vision/LimelightBotpose.java` — the `botpose` format, shared between the simulator and the reader.
+- `RobotLocalization.java` — entry point of the feature.
 - `generated/FeatureConstants.java` — rewritten by Gradle on every `compileJava`; don't edit it.
 - `MarsFeature.json` — the descriptor MARS reads. `version` here drives both the Maven artifact and the installer.
 
 ### Tests
 
-`./gradlew test`. En Windows el build apunta la JVM de test al JDK de WPILib: las nativas de WPILib están compiladas contra su runtime MSVC y con otro JDK la JVM revienta al cargar `ntcore`.
+`./gradlew test`. On Windows the build points the test JVM at the WPILib JDK: the WPILib natives are built against its MSVC runtime and on any other JDK the JVM crashes while loading `ntcore`.
 
 ---
 

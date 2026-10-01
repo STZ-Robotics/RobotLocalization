@@ -12,8 +12,8 @@ import edu.wpi.first.math.geometry.Translation3d;
 import org.junit.jupiter.api.Test;
 
 /**
- * Comprueba el modelo de error del VIO, que es el contenido real de la feature. Son tests puros: no
- * hacen falta ni HAL ni NetworkTables.
+ * Checks the VIO error model, which is the feature's real content. These are pure tests: neither HAL
+ * nor NetworkTables is needed.
  */
 class VioErrorModelTest {
 
@@ -43,28 +43,28 @@ class VioErrorModelTest {
             moving.update(at(i * 0.02), i * DT, DT);
         }
 
-        assertEquals(0.0, still.driftTranslation().getNorm(), 1e-12, "parado no deberia derivar");
+        assertEquals(0.0, still.driftTranslation().getNorm(), 1e-12, "standing still it should not drift");
         assertTrue(
                 moving.driftTranslation().getNorm() > 0.0,
-                "recorrer 10 m deberia acumular deriva");
+                "covering 10 m should accumulate drift");
     }
 
     @Test
     void driftMagnitudeGrowsWithDistanceOnAverage() {
-        // La deriva es un random walk, asi que una corrida concreta puede encogerse: lo que crece
-        // con el recorrido es su magnitud *esperada*. Afirmar monotonia sobre una sola semilla seria
-        // un test intermitente que tarde o temprano falla sin que nada este roto.
+        // The drift is a random walk, so one particular run can shrink: what grows with distance is
+        // its *expected* magnitude. Asserting monotonicity on a single seed would be a flaky test that
+        // sooner or later fails with nothing broken.
         double shortRun = averageDriftAfterSteps(20);
         double longRun = averageDriftAfterSteps(600);
 
-        // En un random walk la desviacion crece como la raiz del numero de pasos: 30 veces mas
-        // pasos son ~5.5 veces mas deriva. Se exige 3 para dejar margen al muestreo.
+        // In a random walk the deviation grows as the square root of the step count: 30 times more
+        // steps is ~5.5 times more drift. 3 is required, to leave room for sampling.
         assertTrue(
                 longRun > shortRun * 3.0,
-                "recorrer 30 veces mas deberia derivar bastante mas: " + shortRun + " -> " + longRun);
+                "covering 30 times more should drift considerably more: " + shortRun + " -> " + longRun);
     }
 
-    /** Promedia la deriva acumulada sobre varias semillas, para no depender de una realizacion. */
+    /** Averages the accumulated drift over several seeds, so as not to depend on one realisation. */
     private static double averageDriftAfterSteps(int steps) {
         int seeds = 40;
         double total = 0.0;
@@ -88,12 +88,12 @@ class VioErrorModelTest {
 
         assertFalse(model.isTracking());
         assertEquals(1, model.trackingLostCounter());
-        assertEquals(1.0, duringLoss.getX(), 1e-9, "sin tracking la pose se congela");
+        assertEquals(1.0, duringLoss.getX(), 1e-9, "without tracking the pose freezes");
     }
 
     @Test
     void regainingTrackingReacquiresAtAnOffset() {
-        // Es el fallo que documenta QuestNav y el que rompe a un pose estimator que confia 2 cm.
+        // It is the failure QuestNav documents and the one that breaks a pose estimator trusting 2 cm.
         QuestNavSimConfig config =
                 QuestNavSimConfig.perfect().withReacquireOffsetMeters(0.25).withRandomSeed(1);
         VioErrorModel model = new VioErrorModel(config);
@@ -103,21 +103,21 @@ class VioErrorModelTest {
         model.update(at(1.0), 1.1, DT);
         Pose3d afterRecovery = model.update(at(1.0), 2.0, DT);
 
-        assertTrue(model.isTracking(), "deberia haber recuperado el tracking");
+        assertTrue(model.isTracking(), "it should have recovered tracking");
         double jump = afterRecovery.getTranslation().getDistance(new Translation3d(1.0, 0.0, 0.0));
-        assertEquals(0.25, jump, 1e-6, "la re-adquisicion deberia venir desplazada");
+        assertEquals(0.25, jump, 1e-6, "the re-acquisition should come back displaced");
     }
 
     @Test
     void aPoseDiscontinuityJumpsWithoutDroppingTracking() {
-        // El doble-tap a passthrough por vibracion: isTracking sigue en true, que es lo traicionero.
+        // The vibration-induced double-tap to passthrough: isTracking stays true, which is the trap.
         VioErrorModel model = new VioErrorModel(QuestNavSimConfig.perfect());
         model.update(at(2.0), 0.0, DT);
 
         model.injectPoseDiscontinuity(new Translation3d(0.4, 0.0, 0.0));
         Pose3d afterJump = model.update(at(2.0), 0.1, DT);
 
-        assertTrue(model.isTracking(), "el doble-tap no tira el tracking");
+        assertTrue(model.isTracking(), "the double-tap does not drop tracking");
         assertEquals(2.4, afterJump.getX(), 1e-9);
     }
 
@@ -148,7 +148,7 @@ class VioErrorModelTest {
             model.update(at(0.0), i * DT, DT);
         }
 
-        assertFalse(model.isPoweredOn(), "la bateria deberia haberse agotado");
+        assertFalse(model.isPoweredOn(), "the battery should have run out");
         assertEquals(0, model.batteryPercent());
     }
 
@@ -171,7 +171,7 @@ class VioErrorModelTest {
                                 .withImpactTrackingLoss(true)
                                 .withImpactThresholds(30.0, 2000.0));
 
-        // Acelerar como acelera un robot de FRC --- unos 6 m/s2 --- no rompe nada...
+        // Accelerating the way an FRC robot accelerates --- around 6 m/s2 --- breaks nothing...
         double x = 0.0;
         double v = 0.0;
         int steps = 50;
@@ -180,22 +180,21 @@ class VioErrorModelTest {
             x += v * DT;
             model.update(at(x), i * DT, DT);
         }
-        assertTrue(model.isTracking(), "acelerar normal no deberia tirar el tracking");
+        assertTrue(model.isTracking(), "normal acceleration should not drop tracking");
 
-        // ...pero pararse en seco contra la pared si: de 3 m/s a 0 en un ciclo son 300 m/s2.
+        // ...but stopping dead against the wall does: 3 m/s to 0 in one cycle is 300 m/s2.
         model.update(at(x), steps * DT, DT);
         model.update(at(x), (steps + 1) * DT, DT);
 
-        assertFalse(model.isTracking(), "un frenazo brusco deberia tirar el tracking");
+        assertFalse(model.isTracking(), "a hard stop should drop tracking");
     }
 
     @Test
     void aSinglePoseJumpIsNotMistakenForACrash() {
-        // El caso que destapo la simulacion viva. La pose que alimenta al modelo viene del pose
-        // estimator del robot, que SALTA cada vez que acepta una medicion de vision. Un salto de
-        // 20 cm en un frame de 10 ms son 2000 m/s2 aparentes: mirando un solo frame, cada
-        // correccion de vision parecia un choque y el Quest perdia el tracking en dos de cada tres
-        // ciclos.
+        // The case the live simulation uncovered. The pose feeding the model comes from the robot's
+        // pose estimator, which JUMPS every time it accepts a vision measurement. A 20 cm jump in a
+        // 10 ms frame is 2000 m/s2 apparent: looking at a single frame, every vision correction looked
+        // like a collision and the Quest lost tracking on two cycles out of three.
         VioErrorModel model =
                 new VioErrorModel(
                         QuestNavSimConfig.perfect()
@@ -207,47 +206,48 @@ class VioErrorModelTest {
             model.update(at(x), i * DT, DT);
         }
 
-        // Correccion de vision: la pose salta 20 cm de un frame al siguiente y sigue quieta.
+        // Vision correction: the pose jumps 20 cm from one frame to the next and then stays put.
         x += 0.20;
         for (int i = 20; i < 40; i++) {
             model.update(at(x), i * DT, DT);
         }
 
-        assertTrue(model.isTracking(), "una correccion de vision no es un choque");
+        assertTrue(model.isTracking(), "a vision correction is not a collision");
         assertEquals(0, model.trackingLostCounter());
     }
 
     @Test
     void feedingBackTheFusedEstimateDefeatsTheImpactDetector() {
-        // Fija una limitacion, no un comportamiento deseable.
+        // This pins down a limitation, not desirable behaviour.
         //
-        // Si le pasas al simulador la pose que sale del pose estimator, y ese estimator se corrige
-        // con vision en cada ciclo del robot, la pose salta cada dos frames del VIO. Eso no es un
-        // impulso aislado --- que la mediana si filtra --- sino una oscilacion a la mitad de la
-        // frecuencia de muestreo, y ningun filtro causal la distingue de un movimiento real.
+        // If you hand the simulator the pose coming out of the pose estimator, and that estimator is
+        // corrected by vision on every robot cycle, the pose jumps every other VIO frame. That is not
+        // an isolated impulse --- which the median does filter --- but an oscillation at half the
+        // sampling frequency, and no causal filter tells it apart from real motion.
         //
-        // La conclusion no es afinar el detector: es que alimentar un sensor simulado con la salida
-        // del estimador es un lazo que no existe en la realidad. La fisica alimenta al sensor y el
-        // sensor al estimador, nunca al reves. Ver SimulatedQuestNav#periodic.
+        // The conclusion is not to tune the detector: it is that feeding a simulated sensor the
+        // estimator's output is a loop that does not exist in reality. The physics feeds the sensor
+        // and the sensor feeds the estimator, never the other way round. See
+        // SimulatedQuestNav#periodic.
         VioErrorModel model =
                 new VioErrorModel(QuestNavSimConfig.perfect().withImpactTrackingLoss(true));
 
         double x = 0.0;
         for (int i = 0; i < 200; i++) {
             if (i % 2 == 0) {
-                x += 0.15; // "correccion de vision" a la mitad de la tasa de frames
+                x += 0.15; // a "vision correction" at half the frame rate
             }
             model.update(at(x), i * DT, DT);
         }
 
         assertTrue(
                 model.trackingLostCounter() > 0,
-                "realimentar el estimador confunde al detector, y esto lo deja documentado");
+                "feeding the estimator back confuses the detector, and this documents that");
     }
 
     @Test
     void aSustainedDecelerationStillCountsAsACrash() {
-        // Y lo contrario tiene que seguir funcionando: un frenazo real dura decenas de ms.
+        // And the converse has to keep working: a real hard stop lasts tens of milliseconds.
         VioErrorModel model =
                 new VioErrorModel(
                         QuestNavSimConfig.perfect()
@@ -263,12 +263,12 @@ class VioErrorModelTest {
         }
         assertTrue(model.isTracking());
 
-        // Choque: la velocidad se derrumba y se queda en cero varios frames.
+        // Collision: the velocity collapses and stays at zero for several frames.
         for (int i = 50; i < 60; i++) {
             model.update(at(x), i * DT, DT);
         }
 
-        assertFalse(model.isTracking(), "un frenazo sostenido si deberia tirar el tracking");
+        assertFalse(model.isTracking(), "a sustained hard stop should drop tracking");
     }
 
     @Test

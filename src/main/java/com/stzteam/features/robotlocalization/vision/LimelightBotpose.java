@@ -12,47 +12,47 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 
 /**
- * El formato del array {@code botpose} de un Limelight, en un solo sitio.
+ * The format of a Limelight's {@code botpose} array, in one place.
  *
- * <p>Lo escribe el simulador y lo lee la fusion, asi que definirlo dos veces seria pedir que un dia
- * dejen de coincidir sin que nada avise. Un test hace el viaje de ida y vuelta entre las dos mitades
- * de la feature para que eso no pueda pasar en silencio.
+ * <p>The simulator writes it and the fusion reads it, so defining it twice would be asking for the
+ * two to stop matching one day with nothing to warn you. A test makes the round trip between the two
+ * halves of the feature so that cannot happen silently.
  *
- * <h2>El formato</h2>
+ * <h2>The format</h2>
  * <pre>
- * [0..5]   x, y, z, roll, pitch, yaw      metros y grados
- * [6]      latencia total                 milisegundos
- * [7]      numero de tags
- * [8]      separacion entre tags          metros
- * [9]      distancia promedio camara-tag  metros
- * [10]     area promedio                  porcentaje de la imagen
- * [11+]    7 valores por tag              id, txnc, tync, ta, distCamara, distRobot, ambiguedad
+ * [0..5]   x, y, z, roll, pitch, yaw      metres and degrees
+ * [6]      total latency                  milliseconds
+ * [7]      tag count
+ * [8]      tag span                       metres
+ * [9]      average camera-tag distance    metres
+ * [10]     average area                   percentage of the image
+ * [11+]    7 values per tag               id, txnc, tync, ta, distCamera, distRobot, ambiguity
  * </pre>
  *
- * <p>El bloque de tags solo se rellena si el largo es <b>exactamente</b>
- * {@code 11 + 7 * numeroDeTags}. Es la misma condicion que impone {@code LimelightHelpers}, y el
- * motivo por el que el numero de tags que se publica tiene que cuadrar con los que se anexan.
+ * <p>The tag block is only filled in if the length is <b>exactly</b> {@code 11 + 7 * tagCount}. It is
+ * the same condition {@code LimelightHelpers} imposes, and the reason the published tag count has to
+ * match the tags actually appended.
  */
 public final class LimelightBotpose {
 
-    /** Valores de cabecera antes del primer tag. */
+    /** Header values before the first tag. */
     public static final int HEADER_LENGTH = 11;
 
-    /** Valores que ocupa cada tag. */
+    /** Values each tag occupies. */
     public static final int VALUES_PER_FIDUCIAL = 7;
 
     private LimelightBotpose() {}
 
     /**
-     * Un tag visible, con los siete valores que publica Limelight.
+     * A visible tag, with the seven values Limelight publishes.
      *
-     * @param id           id del fiducial.
-     * @param txnc         offset horizontal respecto al punto principal, en grados.
-     * @param tync         offset vertical respecto al punto principal, en grados.
-     * @param ta           area del tag, en porcentaje de la imagen.
-     * @param distToCamera distancia camara-tag, en metros.
-     * @param distToRobot  distancia origen del robot-tag, en metros.
-     * @param ambiguity    ambiguedad de la solucion de PnP, de 0 a 1.
+     * @param id           fiducial id.
+     * @param txnc         horizontal offset from the principal point, in degrees.
+     * @param tync         vertical offset from the principal point, in degrees.
+     * @param ta           tag area, as a percentage of the image.
+     * @param distToCamera camera-to-tag distance, in metres.
+     * @param distToRobot  robot-origin-to-tag distance, in metres.
+     * @param ambiguity    ambiguity of the PnP solution, from 0 to 1.
      */
     public record Fiducial(
             int id,
@@ -64,17 +64,17 @@ public final class LimelightBotpose {
             double ambiguity) {}
 
     /**
-     * Una estimacion de pose completa, ya interpretada.
+     * A complete pose estimate, already parsed.
      *
-     * @param pose              pose del robot en el campo.
-     * @param timestampSeconds  instante de la captura, en la base de tiempo del FPGA.
-     * @param latencyMs         latencia total del frame.
-     * @param tagCount          numero de tags usados.
-     * @param tagSpanMeters     separacion entre los tags usados.
-     * @param avgTagDistMeters  distancia promedio a los tags.
-     * @param avgTagAreaPercent area promedio de los tags.
-     * @param fiducials         detalle por tag, vacio si el array venia sin el bloque.
-     * @param megaTag2          si viene de una key {@code botpose_orb}.
+     * @param pose              robot pose on the field.
+     * @param timestampSeconds  the instant of capture, in the FPGA time base.
+     * @param latencyMs         the frame's total latency.
+     * @param tagCount          number of tags used.
+     * @param tagSpanMeters     span between the tags used.
+     * @param avgTagDistMeters  average distance to the tags.
+     * @param avgTagAreaPercent average area of the tags.
+     * @param fiducials         per-tag detail, empty if the array arrived without the block.
+     * @param megaTag2          whether it comes from a {@code botpose_orb} key.
      */
     public record Estimate(
             Pose2d pose,
@@ -88,39 +88,40 @@ public final class LimelightBotpose {
             boolean megaTag2) {
 
         /**
-         * Ambiguedad del tag mas ambiguo.
+         * Ambiguity of the most ambiguous tag.
          *
-         * <p>Se toma el peor y no el promedio porque un tag mal resuelto es el que manda el robot al
-         * otro lado del campo, y promediarlo con otros buenos lo esconde.
+         * <p>The worst is taken rather than the average because a badly solved tag is the one that
+         * sends the robot to the other side of the field, and averaging it with good ones hides it.
          *
-         * <p><b>Ojo con cuando usarla.</b> Solo tiene sentido si {@link #tagCount()} es 1. Con dos o
-         * mas tags la pose sale de un PnP multi-tag geometricamente restringido, mientras que estos
-         * numeros son la ambiguedad del solve individual de cada tag --- precisamente lo que el
-         * multi-tag resuelve. Filtrar por ellos descarta las mejores mediciones disponibles.
+         * <p><b>Mind when you use it.</b> It only makes sense if {@link #tagCount()} is 1. With two or
+         * more tags the pose comes from a geometrically constrained multi-tag PnP, while these numbers
+         * are the ambiguity of each tag's individual solve --- precisely what the multi-tag solve
+         * resolves. Filtering on them discards the best measurements available.
          *
-         * @return la ambiguedad maxima, o vacio si no hay detalle de tags.
+         * @return the maximum ambiguity, or empty if there is no per-tag detail.
          */
         public OptionalDouble worstAmbiguity() {
             return fiducials.stream().mapToDouble(Fiducial::ambiguity).max();
         }
 
-        /** @return true si hay una pose utilizable, es decir al menos un tag. */
+        /** @return true if there is a usable pose, that is, at least one tag. */
         public boolean hasTargets() {
             return tagCount > 0;
         }
     }
 
     /**
-     * Interpreta un array de {@code botpose}.
+     * Parses a {@code botpose} array.
      *
-     * <p>El timestamp de la captura sale del reloj de NetworkTables menos la latencia. Conviene
-     * saber que es el reloj <b>local</b>, no el {@code serverTime}: por eso una fuente de Limelight
-     * se fecha bien aunque el publicador viva en el mismo proceso, cosa que no pasa con QuestNav.
+     * <p>The capture timestamp comes from the NetworkTables clock minus the latency. It is worth
+     * knowing that this is the <b>local</b> clock, not {@code serverTime}: that is why a Limelight
+     * source is dated correctly even when the publisher lives in the same process, which is not the
+     * case for QuestNav.
      *
-     * @param raw                el array tal cual sale de NetworkTables.
-     * @param ntTimestampMicros  instante en que NetworkTables recibio el valor, en microsegundos.
-     * @param megaTag2           si viene de una key {@code botpose_orb}.
-     * @return la estimacion, o vacio si el array esta vacio o es demasiado corto.
+     * @param raw                the array exactly as it comes out of NetworkTables.
+     * @param ntTimestampMicros  the instant NetworkTables received the value, in microseconds.
+     * @param megaTag2           whether it comes from a {@code botpose_orb} key.
+     * @return the estimate, or empty if the array is empty or too short.
      */
     public static Optional<Estimate> parse(
             double[] raw, long ntTimestampMicros, boolean megaTag2) {

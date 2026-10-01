@@ -17,22 +17,22 @@ import java.util.OptionalDouble;
 import java.util.function.Supplier;
 
 /**
- * El estado del robot que todas las fuentes de pose comparten.
+ * The robot state that every pose source shares.
  *
- * <p>Se construye una vez y {@link PoseFusion} se la pasa a cada fuente que registres. Las fuentes
- * la usan para decidir si el momento es bueno para fiarse de una medicion: un robot girando a 600
- * grados por segundo produce imagenes con las que no se puede hacer PnP, y uno que acaba de chocar
- * produce lecturas de IMU que no describen nada.
+ * <p>It is built once and {@link PoseFusion} hands it to every source you register. Sources use it
+ * to decide whether this is a good moment to trust a measurement: a robot spinning at 600 degrees
+ * per second produces images you cannot do PnP with, and one that has just crashed produces IMU
+ * readings that describe nothing.
  *
- * <h2>Todos los campos son opcionales</h2>
- * Un {@code null} significa "no tengo ese dato", y el filtro que dependa de el se salta en vez de
- * fallar. Asi se puede empezar con lo minimo --- una pose y unas velocidades --- e ir anadiendo
- * sensores sin tocar las fuentes.
+ * <h2>Every field is optional</h2>
+ * A {@code null} means "I do not have that datum", and any filter that depends on it is skipped
+ * instead of failing. That way you can start with the bare minimum --- a pose and some speeds ---
+ * and add sensors without touching the sources.
  *
- * <h2>Unidades de la aceleracion</h2>
- * {@code planarAcceleration} va en <b>G</b>, que es lo que devuelven {@code Pigeon2.getAccelerationX}
- * y {@code getAccelerationY}. Es el unico campo con una unidad implicita, asi que conviene no
- * inventarla:
+ * <h2>Acceleration units</h2>
+ * {@code planarAcceleration} is in <b>G</b>, which is what {@code Pigeon2.getAccelerationX} and
+ * {@code getAccelerationY} return. It is the only field with an implicit unit, so it is worth not
+ * guessing it:
  *
  * <pre>{@code
  * () -> VecBuilder.fill(
@@ -40,13 +40,12 @@ import java.util.function.Supplier;
  *         pigeon.getAccelerationY().getValueAsDouble())
  * }</pre>
  *
- * @param gyroHeading        rumbo del giroscopio. Lo necesita MegaTag2 de Limelight.
- * @param angularVelocity    velocidad angular del robot.
- * @param chassisSpeeds      velocidades del chasis, en marco del robot o del campo; solo se usa su
- *                           magnitud.
- * @param planarAcceleration aceleracion en el plano, en G.
- * @param currentPose        pose que el estimator tiene ahora mismo. La usa el filtro de
- *                           Mahalanobis para medir cuanto se desvia una medicion nueva.
+ * @param gyroHeading        gyro heading. Limelight's MegaTag2 needs it.
+ * @param angularVelocity    robot angular velocity.
+ * @param chassisSpeeds      chassis speeds, in robot or field frame; only their magnitude is used.
+ * @param planarAcceleration in-plane acceleration, in G.
+ * @param currentPose        the pose the estimator holds right now. The Mahalanobis filter uses it
+ *                           to measure how far a new measurement strays.
  */
 public record LocalizationInputs(
         Supplier<Rotation2d> gyroHeading,
@@ -55,16 +54,16 @@ public record LocalizationInputs(
         Supplier<Vector<N2>> planarAcceleration,
         Supplier<Pose2d> currentPose) {
 
-    /** Entradas vacias: ningun filtro que dependa del estado del robot se aplica. */
+    /** Empty inputs: no filter that depends on the robot state is applied. */
     public static final LocalizationInputs NONE =
             new LocalizationInputs(null, null, null, null, null);
 
     /**
-     * Construye unas entradas con lo minimo util: la pose actual y las velocidades del chasis.
+     * Builds inputs with the useful minimum: the current pose and the chassis speeds.
      *
-     * @param currentPose   pose que tiene el estimator.
-     * @param chassisSpeeds velocidades del chasis.
-     * @return las entradas.
+     * @param currentPose   the pose the estimator holds.
+     * @param chassisSpeeds chassis speeds.
+     * @return the inputs.
      */
     public static LocalizationInputs of(
             Supplier<Pose2d> currentPose, Supplier<ChassisSpeeds> chassisSpeeds) {
@@ -72,36 +71,36 @@ public record LocalizationInputs(
     }
 
     /**
-     * Rumbo del giroscopio, si hay.
+     * Gyro heading, if there is one.
      *
-     * @return el rumbo, o vacio.
+     * @return the heading, or empty.
      */
     public Optional<Rotation2d> heading() {
         return read(gyroHeading);
     }
 
     /**
-     * Pose que el estimator tiene ahora mismo, si hay.
+     * The pose the estimator holds right now, if there is one.
      *
-     * @return la pose, o vacio.
+     * @return the pose, or empty.
      */
     public Optional<Pose2d> pose() {
         return read(currentPose);
     }
 
     /**
-     * Velocidades del chasis, si hay.
+     * Chassis speeds, if there are any.
      *
-     * @return las velocidades, o vacio.
+     * @return the speeds, or empty.
      */
     public Optional<ChassisSpeeds> speeds() {
         return read(chassisSpeeds);
     }
 
     /**
-     * Magnitud de la velocidad angular en grados por segundo.
+     * Magnitude of the angular velocity in degrees per second.
      *
-     * @return la magnitud, o vacio si no hay giroscopio.
+     * @return the magnitude, or empty if there is no gyro.
      */
     public OptionalDouble angularSpeedDegreesPerSecond() {
         return read(angularVelocity)
@@ -110,9 +109,9 @@ public record LocalizationInputs(
     }
 
     /**
-     * Magnitud de la velocidad lineal en metros por segundo.
+     * Magnitude of the linear velocity in metres per second.
      *
-     * @return la magnitud, o vacio si no hay velocidades de chasis.
+     * @return the magnitude, or empty if there are no chassis speeds.
      */
     public OptionalDouble planarSpeedMetersPerSecond() {
         return speeds()
@@ -121,9 +120,9 @@ public record LocalizationInputs(
     }
 
     /**
-     * Magnitud de la aceleracion en el plano, en G.
+     * Magnitude of the in-plane acceleration, in G.
      *
-     * @return la magnitud, o vacio si no hay acelerometro.
+     * @return the magnitude, or empty if there is no accelerometer.
      */
     public OptionalDouble planarAccelerationGs() {
         return read(planarAcceleration)
@@ -132,9 +131,9 @@ public record LocalizationInputs(
     }
 
     /**
-     * Vector de velocidad en el plano, o el vector cero si no hay velocidades.
+     * In-plane velocity vector, or the zero vector if there are no speeds.
      *
-     * @return el vector de velocidad.
+     * @return the velocity vector.
      */
     public Vector<N2> planarVelocityVector() {
         return speeds()
@@ -143,9 +142,9 @@ public record LocalizationInputs(
     }
 
     /**
-     * Lee un supplier tolerando tanto que el supplier sea nulo como que devuelva nulo. Lo segundo
-     * pasa mas de lo que parece: un getter de hardware puede devolver nulo antes de que el
-     * dispositivo termine de inicializarse.
+     * Reads a supplier, tolerating both a null supplier and a supplier that returns null. The
+     * second happens more than you would think: a hardware getter can return null before the device
+     * finishes initialising.
      */
     private static <T> Optional<T> read(Supplier<T> supplier) {
         return supplier == null ? Optional.empty() : Optional.ofNullable(supplier.get());

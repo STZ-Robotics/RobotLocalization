@@ -21,15 +21,15 @@ import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
 /**
- * Estrategias para calcular la confianza de una medicion de vision.
+ * Strategies for computing the confidence of a vision measurement.
  *
- * <p>Cada estrategia es una {@code BiFunction<Double, Integer, Matrix<N3,N1>>} que va de
- * {@code (distancia en metros, numero de tags)} a {@code [sigmaX, sigmaY, sigmaTheta]}, listo para
- * {@code addVisionMeasurement}. Se le pasan a una fuente con
+ * <p>Each strategy is a {@code BiFunction<Double, Integer, Matrix<N3,N1>>} going from
+ * {@code (distance in metres, tag count)} to {@code [sigmaX, sigmaY, sigmaTheta]}, ready for
+ * {@code addVisionMeasurement}. You hand them to a source with
  * {@link PoseSource#setStdDevsStrategy(BiFunction)}.
  *
- * <p>Se componen: una estrategia base se envuelve con una degradacion dinamica y el resultado se
- * acota con {@link #clamped}:
+ * <p>They compose: a base strategy is wrapped in a dynamic degradation and the result is bounded
+ * with {@link #clamped}:
  *
  * <pre>{@code
  * source.setStdDevsStrategy(
@@ -38,31 +38,31 @@ import java.util.function.Supplier;
  *             StdDevStrategies.quadraticContinuous(0.05, 0.10),
  *             drivetrain::getChassisSpeeds,
  *             3.0, 2.0),
- *         0.02, 4.0,    // sigma XY entre 2 cm y 4 m
- *         0.02, 10.0)); // sigma theta entre 0.02 y 10 rad
+ *         0.02, 4.0,    // sigma XY between 2 cm and 4 m
+ *         0.02, 10.0)); // sigma theta between 0.02 and 10 rad
  * }</pre>
  *
- * <p><b>Acota siempre el resultado final.</b> Las estrategias multiplicativas no tienen techo
- * propio, y un valor desbocado --- o un {@code Infinity} --- rompe la inversion de matrices del
- * filtro de Kalman por dentro, sin un error que diga que paso.
+ * <p><b>Always bound the final result.</b> Multiplicative strategies have no ceiling of their own,
+ * and a runaway value --- or an {@code Infinity} --- breaks the Kalman filter's matrix inversion
+ * from the inside, with no error to say what happened.
  */
 public final class StdDevStrategies {
 
     private StdDevStrategies() {}
 
     // ------------------------------------------------------------------
-    // Composicion
+    // Composition
     // ------------------------------------------------------------------
 
     /**
-     * Acota la salida de una estrategia entre un minimo y un maximo.
+     * Bounds a strategy's output between a minimum and a maximum.
      *
-     * @param strategy estrategia a envolver.
-     * @param minXY    sigma minima de X e Y, en metros.
-     * @param maxXY    sigma maxima de X e Y, en metros.
-     * @param minTheta sigma minima de rumbo, en radianes.
-     * @param maxTheta sigma maxima de rumbo, en radianes.
-     * @return una estrategia cuya salida siempre cae dentro de los limites.
+     * @param strategy strategy to wrap.
+     * @param minXY    minimum sigma for X and Y, in metres.
+     * @param maxXY    maximum sigma for X and Y, in metres.
+     * @param minTheta minimum heading sigma, in radians.
+     * @param maxTheta maximum heading sigma, in radians.
+     * @return a strategy whose output always falls within the bounds.
      */
     public static BiFunction<Double, Integer, Matrix<N3, N1>> clamped(
             BiFunction<Double, Integer, Matrix<N3, N1>> strategy,
@@ -72,9 +72,9 @@ public final class StdDevStrategies {
             double maxTheta) {
         return (distanceMeters, tagCount) -> {
             Matrix<N3, N1> raw = strategy.apply(distanceMeters, tagCount);
-            // X e Y se acotan por separado. Acotar solo X y copiarlo en Y funciona mientras todas
-            // las estrategias devuelvan los dos iguales, y deja de funcionar en silencio en cuanto
-            // alguna no lo haga.
+            // X and Y are bounded separately. Bounding only X and copying it into Y works as long
+            // as every strategy returns the two equal, and silently stops working the moment one
+            // does not.
             return VecBuilder.fill(
                     MathUtil.clamp(raw.get(0, 0), minXY, maxXY),
                     MathUtil.clamp(raw.get(1, 0), minXY, maxXY),
@@ -83,13 +83,13 @@ public final class StdDevStrategies {
     }
 
     /**
-     * Multiplica la salida de una estrategia por un factor constante. Util para desconfiar de una
-     * camara concreta sin reescribir su estrategia.
+     * Multiplies a strategy's output by a constant factor. Useful to distrust one specific camera
+     * without rewriting its strategy.
      *
-     * @param strategy   estrategia a envolver.
-     * @param factorXY   factor para X e Y.
-     * @param factorTheta factor para el rumbo.
-     * @return la estrategia escalada.
+     * @param strategy   strategy to wrap.
+     * @param factorXY   factor for X and Y.
+     * @param factorTheta factor for the heading.
+     * @return the scaled strategy.
      */
     public static BiFunction<Double, Integer, Matrix<N3, N1>> scaled(
             BiFunction<Double, Integer, Matrix<N3, N1>> strategy,
@@ -103,11 +103,11 @@ public final class StdDevStrategies {
     }
 
     /**
-     * Estrategia constante: la misma confianza pase lo que pase.
+     * A constant strategy: the same confidence no matter what.
      *
-     * @param stdXY    sigma de X e Y.
-     * @param stdTheta sigma de rumbo.
-     * @return la estrategia.
+     * @param stdXY    sigma for X and Y.
+     * @param stdTheta heading sigma.
+     * @return the strategy.
      */
     public static BiFunction<Double, Integer, Matrix<N3, N1>> constant(
             double stdXY, double stdTheta) {
@@ -116,19 +116,18 @@ public final class StdDevStrategies {
     }
 
     // ------------------------------------------------------------------
-    // Basadas en distancia y numero de tags
+    // Based on distance and tag count
     // ------------------------------------------------------------------
 
     /**
-     * La cuadratica continua, que es la recomendacion habitual en FRC.
+     * The continuous quadratic, which is the usual recommendation in FRC.
      *
-     * <p>El error crece con el cuadrado de la distancia --- un tag al doble de lejos ocupa la cuarta
-     * parte de los pixeles, y el PnP se degrada igual de rapido --- y baja con el numero de tags
-     * visibles.
+     * <p>The error grows with the square of the distance --- a tag twice as far away covers a quarter
+     * of the pixels, and PnP degrades just as fast --- and drops with the number of visible tags.
      *
-     * @param baseXY    coeficiente de X e Y.
-     * @param baseTheta coeficiente del rumbo.
-     * @return la estrategia {@code base * distancia^2 / tags}.
+     * @param baseXY    coefficient for X and Y.
+     * @param baseTheta coefficient for the heading.
+     * @return the {@code base * distance^2 / tags} strategy.
      */
     public static BiFunction<Double, Integer, Matrix<N3, N1>> quadraticContinuous(
             double baseXY, double baseTheta) {
@@ -142,31 +141,31 @@ public final class StdDevStrategies {
     }
 
     /**
-     * Un tramo de distancia con su error base.
+     * A distance band with its base error.
      *
-     * @param limitDistanceMeters distancia por debajo de la cual aplica este tramo.
-     * @param baseStdXY           sigma de X e Y en este tramo.
-     * @param baseStdTheta        sigma de rumbo en este tramo.
+     * @param limitDistanceMeters distance below which this band applies.
+     * @param baseStdXY           sigma for X and Y in this band.
+     * @param baseStdTheta        heading sigma in this band.
      */
     public record DistanceStep(
             double limitDistanceMeters, double baseStdXY, double baseStdTheta) {}
 
     /**
-     * Un tramo de numero de tags con su multiplicador de confianza.
+     * A tag-count band with its confidence multiplier.
      *
-     * @param minTags         tags minimos para que aplique este tramo.
-     * @param multiplierXY    multiplicador de X e Y.
-     * @param multiplierTheta multiplicador del rumbo.
+     * @param minTags         minimum tags for this band to apply.
+     * @param multiplierXY    multiplier for X and Y.
+     * @param multiplierTheta multiplier for the heading.
      */
     public record TagStep(int minTags, double multiplierXY, double multiplierTheta) {}
 
     /**
-     * Combina una tabla por tramos de distancia con un multiplicador por numero de tags.
+     * Combines a distance-banded table with a tag-count multiplier.
      *
-     * @param fallback      error base cuando la distancia supera todos los tramos.
-     * @param distanceSteps tramos de distancia, en cualquier orden.
-     * @param tagSteps      tramos de numero de tags, en cualquier orden.
-     * @return la estrategia combinada.
+     * @param fallback      base error when the distance exceeds every band.
+     * @param distanceSteps distance bands, in any order.
+     * @param tagSteps      tag-count bands, in any order.
+     * @return the combined strategy.
      */
     public static BiFunction<Double, Integer, Matrix<N3, N1>> dualStepWise(
             Matrix<N3, N1> fallback, List<DistanceStep> distanceSteps, List<TagStep> tagSteps) {
@@ -197,17 +196,17 @@ public final class StdDevStrategies {
     }
 
     /**
-     * Interpola el error base de una curva medida en la practica, y le aplica el multiplicador por
-     * numero de tags.
+     * Interpolates the base error from a curve measured in practice, then applies the tag-count
+     * multiplier.
      *
-     * <p>Es la mejor opcion si te tomaste el trabajo de medir: pon el robot a distancias conocidas,
-     * anota la dispersion real, y mete esos puntos en los mapas. WPILib interpola entre ellos y
-     * satura en el ultimo punto conocido.
+     * <p>This is the best option if you went to the trouble of measuring: put the robot at known
+     * distances, note the real spread, and feed those points into the maps. WPILib interpolates
+     * between them and saturates at the last known point.
      *
-     * @param xyMap    mapa distancia (m) a sigma de X e Y (m).
-     * @param thetaMap mapa distancia (m) a sigma de rumbo (rad).
-     * @param tagSteps tramos de numero de tags.
-     * @return la estrategia empirica.
+     * @param xyMap    map from distance (m) to sigma for X and Y (m).
+     * @param thetaMap map from distance (m) to heading sigma (rad).
+     * @param tagSteps tag-count bands.
+     * @return the empirical strategy.
      */
     public static BiFunction<Double, Integer, Matrix<N3, N1>> interpolatedEmpirical(
             InterpolatingDoubleTreeMap xyMap,
@@ -244,28 +243,28 @@ public final class StdDevStrategies {
     }
 
     // ------------------------------------------------------------------
-    // Degradacion por movimiento
+    // Motion-induced degradation
     // ------------------------------------------------------------------
 
     /**
-     * Infla el error base cuando el robot se mueve, para compensar el desenfoque y la deformacion de
-     * obturador rodante.
+     * Inflates the base error when the robot is moving, to account for blur and rolling-shutter
+     * distortion.
      *
-     * <p>La velocidad lineal castiga la confianza en X e Y. La angular castiga las dos, y mas fuerte:
-     * girando rapido, los tags salen sesgados y el PnP pierde primero la rotacion, que es
-     * precisamente el eje que menos se puede permitir equivocar.
+     * <p>Linear velocity penalises confidence in X and Y. Angular velocity penalises both, and
+     * harder: spinning fast, the tags come out skewed and PnP loses the rotation first, which is
+     * precisely the axis you can least afford to get wrong.
      *
-     * <p>Los multiplicadores se acotan internamente a 400 como red de seguridad, para que esta
-     * estrategia no pueda devolver {@code Infinity} aunque la velocidad se dispare. Para controlar el
-     * rango final de verdad, envuelvela con {@link #clamped}.
+     * <p>The multipliers are internally bounded to 400 as a safety net, so this strategy cannot
+     * return {@code Infinity} even if the speed runs away. To really control the final range, wrap
+     * it in {@link #clamped}.
      *
-     * @param baseStrategy     estrategia a inflar.
-     * @param speedsSupplier   velocidades actuales del chasis.
-     * @param maxSafeLinearMps velocidad lineal a partir de la cual la imagen se degrada.
-     * @param maxSafeOmegaRads velocidad angular a partir de la cual los tags salen sesgados.
-     * @param angularBias      cuanto pesa el exceso angular frente al lineal. 2.0 es un punto de
-     *                         partida razonable: girar estropea la imagen mas que avanzar.
-     * @return la estrategia inflada.
+     * @param baseStrategy     strategy to inflate.
+     * @param speedsSupplier   the chassis' current speeds.
+     * @param maxSafeLinearMps linear velocity above which the image degrades.
+     * @param maxSafeOmegaRads angular velocity above which the tags come out skewed.
+     * @param angularBias      how much the angular excess weighs against the linear one. 2.0 is a
+     *                         reasonable starting point: spinning ruins the image more than driving.
+     * @return the inflated strategy.
      */
     public static BiFunction<Double, Integer, Matrix<N3, N1>> dynamicStateDegradation(
             BiFunction<Double, Integer, Matrix<N3, N1>> baseStrategy,
@@ -307,13 +306,13 @@ public final class StdDevStrategies {
     }
 
     /**
-     * Version con el sesgo angular por defecto de 2.0.
+     * The version with the default angular bias of 2.0.
      *
-     * @param baseStrategy     estrategia a inflar.
-     * @param speedsSupplier   velocidades actuales del chasis.
-     * @param maxSafeLinearMps velocidad lineal segura.
-     * @param maxSafeOmegaRads velocidad angular segura.
-     * @return la estrategia inflada.
+     * @param baseStrategy     strategy to inflate.
+     * @param speedsSupplier   the chassis' current speeds.
+     * @param maxSafeLinearMps safe linear velocity.
+     * @param maxSafeOmegaRads safe angular velocity.
+     * @return the inflated strategy.
      */
     public static BiFunction<Double, Integer, Matrix<N3, N1>> dynamicStateDegradation(
             BiFunction<Double, Integer, Matrix<N3, N1>> baseStrategy,
@@ -325,14 +324,14 @@ public final class StdDevStrategies {
     }
 
     /**
-     * Desconfia de un VIO cuando el robot gira rapido, que es cuando su tracking sufre.
+     * Distrusts a VIO when the robot spins fast, which is when its tracking suffers.
      *
-     * @param baseXY             sigma de X e Y en reposo.
-     * @param baseTheta          sigma de rumbo en reposo.
-     * @param angularVelocity    velocidad angular actual.
-     * @param toleranceDegPerSec giro a partir del cual empieza a desconfiar.
-     * @param scaleDegPerSec     cada cuantos grados por segundo de exceso se duplica el error.
-     * @return la estrategia.
+     * @param baseXY             sigma for X and Y at rest.
+     * @param baseTheta          heading sigma at rest.
+     * @param angularVelocity    the current angular velocity.
+     * @param toleranceDegPerSec the turn rate at which it starts to distrust.
+     * @param scaleDegPerSec     how many degrees per second of excess double the error.
+     * @return the strategy.
      */
     public static BiFunction<Double, Integer, Matrix<N3, N1>> vioMotionBlur(
             double baseXY,
@@ -358,21 +357,21 @@ public final class StdDevStrategies {
     }
 
     // ------------------------------------------------------------------
-    // Deriva de VIO
+    // VIO drift
     // ------------------------------------------------------------------
 
     /**
-     * Estrategia de deriva para un VIO, que se puede resetear.
+     * A drift strategy for a VIO, which can be reset.
      *
-     * <p>Un sensor de odometria visual-inercial no se equivoca por estar lejos de nada: se equivoca
-     * por llevar rato sin que nadie lo corrija. Su error crece con el tiempo desde la ultima
-     * correccion, no con la distancia ni con el numero de tags.
+     * <p>A visual-inertial odometry sensor does not go wrong from being far from anything: it goes
+     * wrong from having gone a while without anyone correcting it. Its error grows with the time
+     * since the last correction, not with distance or tag count.
      *
-     * <p>Por eso esta estrategia es una clase y no una lambda: cuando el robot le manda un
-     * {@code POSE_RESET} al headset, la deriva real vuelve a cero y hay que decirselo con
-     * {@link #reset()}. Una version que capture el instante de arranque y no se pueda resetear
-     * sigue inflando el error para siempre, y acaba haciendo que el estimator ignore un sensor que
-     * ya esta bien.
+     * <p>That is why this strategy is a class and not a lambda: when the robot sends a
+     * {@code POSE_RESET} to the headset, the real drift goes back to zero and you have to say so
+     * with {@link #reset()}. A version that captures the start instant and cannot be reset keeps
+     * inflating the error forever, and ends up making the estimator ignore a sensor that is already
+     * fine.
      */
     public static final class VioDriftStrategy
             implements BiFunction<Double, Integer, Matrix<N3, N1>> {
@@ -399,12 +398,12 @@ public final class StdDevStrategies {
             this.lastResetSeconds = clock.getAsDouble();
         }
 
-        /** Vuelve a poner la deriva en cero. Llamalo justo despues de corregir el sensor. */
+        /** Puts the drift back to zero. Call it right after correcting the sensor. */
         public void reset() {
             this.lastResetSeconds = clock.getAsDouble();
         }
 
-        /** @return segundos desde la ultima correccion. */
+        /** @return seconds since the last correction. */
         public double elapsedSeconds() {
             return Math.max(0.0, clock.getAsDouble() - lastResetSeconds);
         }
@@ -419,15 +418,15 @@ public final class StdDevStrategies {
     }
 
     /**
-     * Crea una estrategia de deriva para un VIO, con el reloj del FPGA.
+     * Creates a drift strategy for a VIO, on the FPGA clock.
      *
-     * @param baseXY              sigma de X e Y recien corregido.
-     * @param baseTheta           sigma de rumbo recien corregido.
-     * @param driftPerSecondXY    metros de incertidumbre que suma cada segundo.
-     * @param driftPerSecondTheta radianes de incertidumbre que suma cada segundo. El rumbo de un
-     *                            Quest deriva mucho menos que la posicion, asi que suele ser un
-     *                            orden de magnitud menor.
-     * @return la estrategia, que hay que resetear tras cada correccion.
+     * @param baseXY              sigma for X and Y when freshly corrected.
+     * @param baseTheta           heading sigma when freshly corrected.
+     * @param driftPerSecondXY    metres of uncertainty added each second.
+     * @param driftPerSecondTheta radians of uncertainty added each second. A Quest's heading drifts
+     *                            far less than its position, so this is usually an order of
+     *                            magnitude smaller.
+     * @return the strategy, which must be reset after each correction.
      */
     public static VioDriftStrategy vioTimeDrift(
             double baseXY, double baseTheta, double driftPerSecondXY, double driftPerSecondTheta) {
@@ -436,14 +435,14 @@ public final class StdDevStrategies {
     }
 
     /**
-     * Crea una estrategia de deriva con un reloj propio, para tests.
+     * Creates a drift strategy with your own clock, for tests.
      *
-     * @param baseXY              sigma de X e Y recien corregido.
-     * @param baseTheta           sigma de rumbo recien corregido.
-     * @param driftPerSecondXY    metros por segundo.
-     * @param driftPerSecondTheta radianes por segundo.
-     * @param clock               fuente de tiempo en segundos.
-     * @return la estrategia.
+     * @param baseXY              sigma for X and Y when freshly corrected.
+     * @param baseTheta           heading sigma when freshly corrected.
+     * @param driftPerSecondXY    metres per second.
+     * @param driftPerSecondTheta radians per second.
+     * @param clock               time source, in seconds.
+     * @return the strategy.
      */
     public static VioDriftStrategy vioTimeDrift(
             double baseXY,

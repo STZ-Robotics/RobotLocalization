@@ -17,9 +17,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Fija las convenciones de la traduccion. Si alguien invierte un signo aqui, el robot code
- * escrito contra un Limelight real empieza a girar al reves en simulacion, asi que estos
- * tests son la red de seguridad de toda la feature.
+ * Pins down the translation conventions. If somebody inverts a sign here, robot code written
+ * against a real Limelight starts turning the wrong way in simulation, so these tests are the
+ * safety net of the whole feature.
  */
 class LimelightCoordinatesTest {
 
@@ -92,21 +92,21 @@ class LimelightCoordinatesTest {
 
     @Test
     void cameraSpaceSwapsAxesToRightDownForward() {
-        // 2 m adelante, 1 m a la izquierda y 0.5 m arriba, en convencion WPILib.
+        // 2 m forward, 1 m left and 0.5 m up, in the WPILib convention.
         Transform3d wpilib =
                 new Transform3d(new Translation3d(2.0, 1.0, 0.5), Rotation3d.kZero);
 
         double[] limelight = LimelightCoordinates.toLimelightCameraSpace(wpilib);
 
-        assertEquals(-1.0, limelight[0], EPS); // 1 m a la izquierda = -1 en el eje "derecha"
-        assertEquals(-0.5, limelight[1], EPS); // 0.5 m arriba = -0.5 en el eje "abajo"
-        assertEquals(2.0, limelight[2], EPS); // adelante se convierte en el eje "forward"
+        assertEquals(-1.0, limelight[0], EPS); // 1 m left = -1 on the "right" axis
+        assertEquals(-0.5, limelight[1], EPS); // 0.5 m up = -0.5 on the "down" axis
+        assertEquals(2.0, limelight[2], EPS); // forward becomes the "forward" axis
     }
 
     @Test
     void cameraSpaceTurnsWpilibYawIntoLimelightPitch() {
-        // Girar +30 grados sobre el eje Z (arriba) de WPILib equivale a girar -30 grados
-        // sobre el eje Y (abajo) de Limelight.
+        // Turning +30 degrees about WPILib's Z axis (up) is the same as turning -30 degrees
+        // about Limelight's Y axis (down).
         Transform3d wpilib =
                 new Transform3d(
                         Translation3d.kZero, new Rotation3d(0.0, 0.0, Units.degreesToRadians(30.0)));
@@ -129,13 +129,13 @@ class LimelightCoordinatesTest {
         double[] array =
                 LimelightCoordinates.botposeArray(new Pose3d(1.0, 2.0, 0.0, Rotation3d.kZero), frame, fiducials);
 
-        // LimelightHelpers.getBotPoseEstimate solo rellena rawFiducials si el largo es exacto.
+        // LimelightHelpers.getBotPoseEstimate only fills rawFiducials in if the length is exact.
         assertEquals(11 + 7 * fiducials.length, array.length);
-        assertEquals(12.5, array[6], EPS); // latencia total en ms
+        assertEquals(12.5, array[6], EPS); // total latency in ms
         assertEquals(2.0, array[7], EPS); // tag count
         assertEquals(1.25, array[8], EPS); // tag span
-        assertEquals(3.5, array[9], EPS); // distancia promedio
-        assertEquals(0.9, array[10], EPS); // area promedio
+        assertEquals(3.5, array[9], EPS); // average distance
+        assertEquals(0.9, array[10], EPS); // average area
 
         assertEquals(7.0, array[11], EPS);
         assertEquals(0.06, array[17], EPS);

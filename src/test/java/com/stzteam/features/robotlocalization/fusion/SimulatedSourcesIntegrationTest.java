@@ -37,11 +37,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Las dos mitades de la feature, juntas: los simuladores producen mediciones y la fusion las
- * consume, sin una sola rama de codigo para simulacion.
+ * The feature's two halves, together: the simulators produce measurements and the fusion consumes
+ * them, with not a single simulation-specific branch.
  *
- * <p>Es el test que justifica que las dos vivan en el mismo paquete. Si alguien cambia el formato de
- * {@code botpose} en el publicador y se olvida del lector, esto se cae.
+ * <p>It is the test that justifies the two living in the same package. If somebody changes the
+ * {@code botpose} format in the publisher and forgets the reader, this falls over.
  */
 class SimulatedSourcesIntegrationTest {
 
@@ -118,7 +118,7 @@ class SimulatedSourcesIntegrationTest {
                         .registerSource(source);
     }
 
-    /** Una fuente que no filtra por ambiguedad, para los tests que van de otra cosa. */
+    /** A source that does not filter on ambiguity, for the tests that are about something else. */
     private LimelightPoseSource permissiveSource() {
         return new LimelightPoseSource(
                         CAMERA,
@@ -135,7 +135,7 @@ class SimulatedSourcesIntegrationTest {
         }
     }
 
-    /** Lleva al robot a otra pose interpolando, como si condujera. */
+    /** Moves the robot to another pose by interpolating, as if it were driving. */
     private void driveTo(Pose2d target, int steps) {
         Pose2d start = robotPose;
         for (int i = 1; i <= steps; i++) {
@@ -151,7 +151,7 @@ class SimulatedSourcesIntegrationTest {
 
         runLoops(15);
 
-        assertFalse(accepted.isEmpty(), "deberia haber llegado alguna medicion");
+        assertFalse(accepted.isEmpty(), "some measurement should have arrived");
         PoseSample last = accepted.get(accepted.size() - 1);
         assertEquals(robotPose.getX(), last.pose().getX(), 0.3);
         assertEquals(robotPose.getY(), last.pose().getY(), 0.3);
@@ -165,15 +165,15 @@ class SimulatedSourcesIntegrationTest {
 
         PoseSample last = accepted.get(accepted.size() - 1);
         double now = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
-        assertTrue(last.timestampSeconds() < now, "la captura ocurrio antes de la lectura");
-        assertTrue(now - last.timestampSeconds() < 0.5, "pero no hace medio segundo");
+        assertTrue(last.timestampSeconds() < now, "the capture happened before the read");
+        assertTrue(now - last.timestampSeconds() < 0.5, "but not half a second ago");
     }
 
     @Test
     void theAmbiguityGateIsActuallyWiredIn() {
-        // El gate existia pero no lo llamaba nadie: una medicion con ambiguedad 0.9 pasaba entera.
-        // Con el umbral en cero, cualquier solucion de un solo tag --- que siempre tiene dos
-        // interpretaciones posibles, y por tanto ambiguedad estrictamente positiva --- se descarta.
+        // The gate existed but nobody called it: a measurement with ambiguity 0.9 sailed right through.
+        // With the threshold at zero, any single-tag solution --- which always has two possible
+        // interpretations, and therefore a strictly positive ambiguity --- gets discarded.
         startLimelight(
                 new LimelightPoseSource(
                         CAMERA, LimelightPoseSource.Mode.MEGATAG_1,
@@ -184,11 +184,11 @@ class SimulatedSourcesIntegrationTest {
         assertEquals(
                 1.0,
                 NetworkTableInstance.getDefault().getTable(CAMERA).getEntry("tv").getDouble(-1),
-                "la camara si ve el tag");
+                "the camera does see the tag");
         assertEquals(
                 RejectionReason.AMBIGUITY,
                 fusion.getSource(CAMERA).orElseThrow().getLastReason(),
-                "pero el filtro la descarta");
+                "but the filter discards it");
         assertTrue(accepted.isEmpty());
     }
 
@@ -198,9 +198,9 @@ class SimulatedSourcesIntegrationTest {
         runLoops(15);
         double closeStdDev = accepted.get(accepted.size() - 1).stdDevs().get(0, 0);
 
-        // Retroceder conduciendo y no teletransportando: photonlib interpola la pose del robot para
-        // fechar cada frame, asi que un salto instantaneo produce unos ciclos de mediciones que no
-        // describen ni el sitio viejo ni el nuevo.
+        // Back off by driving rather than teleporting: photonlib interpolates the robot pose to date
+        // each frame, so an instantaneous jump produces a few cycles of measurements that describe
+        // neither the old place nor the new one.
         Pose2d farPose = poseFacingTagAt(DISTANCE_TO_TAG + 2.0);
         driveTo(farPose, 25);
         accepted.clear();
@@ -208,12 +208,12 @@ class SimulatedSourcesIntegrationTest {
 
         assertFalse(
                 accepted.isEmpty(),
-                "a 5 m todavia deberia medir; motivo="
+                "at 5 m it should still be measuring; reason="
                         + fusion.getSource(CAMERA).orElseThrow().getLastReason());
         double farStdDev = accepted.get(accepted.size() - 1).stdDevs().get(0, 0);
         assertTrue(
                 farStdDev > closeStdDev,
-                "mas lejos deberia inspirar menos confianza: " + closeStdDev + " -> " + farStdDev);
+                "farther away should inspire less confidence: " + closeStdDev + " -> " + farStdDev);
     }
 
     @Test
@@ -226,7 +226,7 @@ class SimulatedSourcesIntegrationTest {
         new SimDeviceSim("Limelight:" + CAMERA, 0).getBoolean("Force No Targets").set(true);
         runLoops(10);
 
-        assertTrue(accepted.isEmpty(), "sin targets no deberia llegar nada");
+        assertTrue(accepted.isEmpty(), "with no targets nothing should arrive");
         assertEquals(
                 RejectionReason.NO_MEASUREMENT,
                 fusion.getSource(CAMERA).orElseThrow().getLastReason());
@@ -234,7 +234,7 @@ class SimulatedSourcesIntegrationTest {
 
     @Test
     void theBotposeFormatRoundTripsBetweenThePublisherAndTheReader() {
-        // El formato lo escribe el simulador y lo lee la fusion. Este es el amarre entre los dos.
+        // The simulator writes the format and the fusion reads it. This is the tie between the two.
         startLimelight();
         runLoops(15);
 
@@ -251,7 +251,7 @@ class SimulatedSourcesIntegrationTest {
                 LimelightBotpose.HEADER_LENGTH
                         + LimelightBotpose.VALUES_PER_FIDUCIAL * parsed.tagCount(),
                 raw.length,
-                "el largo lo exige el parser de LimelightHelpers");
+                "the length is what the LimelightHelpers parser demands");
         assertEquals(parsed.tagCount(), parsed.fiducials().size());
         assertTrue(parsed.worstAmbiguity().isPresent());
         assertTrue(parsed.avgTagDistMeters() > 0.0);
@@ -278,17 +278,17 @@ class SimulatedSourcesIntegrationTest {
                         .subscribe(new Pose3d[0])
                         .get();
 
-        assertEquals(layout.getTags().size(), fieldTags.length, "el campo entero en 3D");
-        assertEquals(1, cameras.length, "una camara montada");
-        assertTrue(visible.length >= 1, "deberia estar viendo al menos un tag");
-        assertTrue(fieldTags[0].getZ() > 0.0, "los tags tienen altura, que es el punto de ser 3D");
+        assertEquals(layout.getTags().size(), fieldTags.length, "the whole field in 3D");
+        assertEquals(1, cameras.length, "one mounted camera");
+        assertTrue(visible.length >= 1, "it should be seeing at least one tag");
+        assertTrue(fieldTags[0].getZ() > 0.0, "the tags have height, which is the point of being 3D");
     }
 
     @Test
     void aQuestNavSourceRefusesToUseTheSentinelTimestamp() {
-        // Publicando en la misma instancia de NetworkTables, dataTimestamp vale 1 microsegundo.
-        // Fechar mal una medicion corrompe el estimator sin que salte ningun error, asi que la
-        // fuente prefiere no aportar nada y decir por que.
+        // Publishing on the same NetworkTables instance, dataTimestamp is 1 microsecond. Mis-dating a
+        // measurement corrupts the estimator with no error raised, so the source prefers to contribute
+        // nothing and say why.
         Transform3d robotToQuest =
                 new Transform3d(
                         new Translation3d(0.0, -0.332, 0.0),
@@ -313,7 +313,7 @@ class SimulatedSourcesIntegrationTest {
             questFusion.update();
         }
 
-        assertTrue(accepted.isEmpty(), "mejor ninguna medicion que una mal fechada");
+        assertTrue(accepted.isEmpty(), "no measurement is better than a mis-dated one");
         assertEquals(RejectionReason.NO_MEASUREMENT, source.getLastReason());
     }
 }

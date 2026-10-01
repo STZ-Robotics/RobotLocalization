@@ -14,33 +14,34 @@ import java.util.OptionalDouble;
 import java.util.function.BiFunction;
 
 /**
- * Una fuente de mediciones de pose: una camara, un headset de VIO, lo que sea que pueda decir donde
- * esta el robot.
+ * A source of pose measurements: a camera, a VIO headset, anything that can say where the robot is.
  *
- * <p>Para escribir una solo hacen falta dos metodos: {@link #getMeasurement()}, que lee el hardware,
- * y {@link #isPoseValid(Pose2d)}, que decide si la pose resultante tiene sentido. Todo el resto ---
- * filtros de movimiento, ambiguedad, timestamps, telemetria, encendido y apagado --- ya esta aqui.
+ * <p>Writing one takes only two methods: {@link #getMeasurement()}, which reads the hardware, and
+ * {@link #isPoseValid(Pose2d)}, which decides whether the resulting pose makes sense. Everything
+ * else --- motion filters, ambiguity, timestamps, telemetry, enabling and disabling --- is already
+ * here.
  *
- * <h2>Los filtros</h2>
- * {@link PoseFusion} los aplica en este orden, y el primero que falle descarta la medicion:
+ * <h2>The filters</h2>
+ * {@link PoseFusion} applies them in this order, and the first one that fails discards the
+ * measurement:
  *
  * <ol>
- *   <li><b>Encendida</b>, desde codigo o desde el dashboard.</li>
- *   <li><b>Entorno</b>: velocidad angular, aceleracion y velocidad lineal por debajo de sus
- *       umbrales. Se evalua antes de leer el hardware, asi que una fuente descartada por entorno ni
- *       siquiera gasta el tiempo de la lectura.</li>
- *   <li><b>Timestamp</b> estrictamente mas nuevo que el de la ultima medicion aceptada.</li>
- *   <li><b>Pose valida</b>, segun la subclase.</li>
- *   <li><b>Ambiguedad</b>, si la fuente la reporta.</li>
- *   <li><b>Consenso</b> con las demas fuentes; lo arbitra {@link ConsensusGate}.</li>
- *   <li><b>Mahalanobis</b> contra lo que el estimator ya cree.</li>
+ *   <li><b>Enabled</b>, from code or from the dashboard.</li>
+ *   <li><b>Environment</b>: angular velocity, acceleration and linear velocity below their
+ *       thresholds. This is evaluated before reading the hardware, so a source discarded on
+ *       environment does not even spend the time of the read.</li>
+ *   <li><b>Timestamp</b> strictly newer than that of the last accepted measurement.</li>
+ *   <li><b>Valid pose</b>, according to the subclass.</li>
+ *   <li><b>Ambiguity</b>, if the source reports it.</li>
+ *   <li><b>Consensus</b> with the other sources; {@link ConsensusGate} arbitrates it.</li>
+ *   <li><b>Mahalanobis</b> against what the estimator already believes.</li>
  * </ol>
  *
- * <h2>Desviaciones estandar</h2>
- * Hay dos caminos. Uno fijo con {@link #setStdDevs(double, double, double)}, y uno dinamico con
- * {@link #setStdDevsStrategy(BiFunction)}, que recibe distancia y numero de tags y devuelve la
- * confianza que toque. El segundo es lo normal para vision, y {@link StdDevStrategies} trae las
- * estrategias hechas.
+ * <h2>Standard deviations</h2>
+ * There are two routes. A fixed one with {@link #setStdDevs(double, double, double)}, and a dynamic
+ * one with {@link #setStdDevsStrategy(BiFunction)}, which receives the distance and the tag count
+ * and returns the matching confidence. The second is the normal choice for vision, and
+ * {@link StdDevStrategies} ships the ready-made strategies.
  */
 public abstract class PoseSource {
 
@@ -50,7 +51,7 @@ public abstract class PoseSource {
     private PoseSourceConfig config;
     private BiFunction<Double, Integer, Matrix<N3, N1>> stdDevsStrategy;
 
-    /** Rellenado por {@link PoseFusion} al registrar la fuente. */
+    /** Filled in by {@link PoseFusion} when the source is registered. */
     protected LocalizationInputs inputs = LocalizationInputs.NONE;
 
     private String telemetryTable = "Localization";
@@ -62,11 +63,11 @@ public abstract class PoseSource {
     private RejectionReason lastReason = RejectionReason.NO_MEASUREMENT;
 
     /**
-     * Crea una fuente.
+     * Creates a source.
      *
-     * @param name            nombre unico; es la clave en NetworkTables y en el registro.
-     * @param defaultStdDevs  desviaciones estandar por defecto, si no se pone una estrategia.
-     * @param config          umbrales de los filtros.
+     * @param name            unique name; it is the key in NetworkTables and in the registry.
+     * @param defaultStdDevs  default standard deviations, used when no strategy is set.
+     * @param config          filter thresholds.
      */
     protected PoseSource(String name, Matrix<N3, N1> defaultStdDevs, PoseSourceConfig config) {
         this.name = name;
@@ -75,61 +76,61 @@ public abstract class PoseSource {
     }
 
     // ------------------------------------------------------------------
-    // Lo que implementa la subclase
+    // What the subclass implements
     // ------------------------------------------------------------------
 
     /**
-     * Lee el hardware y devuelve la medicion de este ciclo, si hay alguna.
+     * Reads the hardware and returns this cycle's measurement, if there is one.
      *
-     * <p>Solo se llama cuando la fuente esta encendida y el entorno es valido, asi que no hace falta
-     * volver a comprobar nada de eso.
+     * <p>It is only called when the source is enabled and the environment is valid, so none of that
+     * needs to be checked again.
      *
-     * @return la medicion, o vacio si no hay nada nuevo.
+     * @return the measurement, or empty if there is nothing new.
      */
     public abstract Optional<PoseSample> getMeasurement();
 
     /**
-     * Decide si una pose tiene sentido. Lo habitual es comprobar que caiga dentro del campo con
+     * Decides whether a pose makes sense. The usual check is that it falls inside the field, with
      * {@link PoseFusion#isInField(Pose2d, double)}.
      *
-     * @param pose pose a validar.
-     * @return true si la pose es aceptable.
+     * @param pose pose to validate.
+     * @return true if the pose is acceptable.
      */
     public abstract boolean isPoseValid(Pose2d pose);
 
     /**
-     * Ambiguedad de la ultima solucion de PnP, si la fuente la reporta.
+     * Ambiguity of the last PnP solution, if the source reports it.
      *
-     * <p>Devolver vacio --- que es el comportamiento por defecto --- significa "esta fuente no tiene
-     * ese concepto", y el filtro de ambiguedad se salta. Es lo correcto para un VIO.
+     * <p>Returning empty --- which is the default behaviour --- means "this source has no such
+     * concept", and the ambiguity filter is skipped. That is the right thing for a VIO.
      *
-     * @return la ambiguedad de 0 a 1, o vacio.
+     * @return the ambiguity from 0 to 1, or empty.
      */
     public OptionalDouble getAmbiguity() {
         return OptionalDouble.empty();
     }
 
     // ------------------------------------------------------------------
-    // Configuracion
+    // Configuration
     // ------------------------------------------------------------------
 
     /**
-     * Fija desviaciones estandar constantes y descarta cualquier estrategia dinamica.
+     * Sets constant standard deviations and drops any dynamic strategy.
      *
-     * @param stdX     desviacion en X, metros.
-     * @param stdY     desviacion en Y, metros.
-     * @param stdTheta desviacion de rumbo, radianes.
-     * @return esta misma fuente.
+     * @param stdX     deviation in X, metres.
+     * @param stdY     deviation in Y, metres.
+     * @param stdTheta heading deviation, radians.
+     * @return this same source.
      */
     public PoseSource setStdDevs(double stdX, double stdY, double stdTheta) {
         return setStdDevs(VecBuilder.fill(stdX, stdY, stdTheta));
     }
 
     /**
-     * Fija desviaciones estandar constantes y descarta cualquier estrategia dinamica.
+     * Sets constant standard deviations and drops any dynamic strategy.
      *
-     * @param newStdDevs vector de desviaciones.
-     * @return esta misma fuente.
+     * @param newStdDevs deviation vector.
+     * @return this same source.
      */
     public PoseSource setStdDevs(Matrix<N3, N1> newStdDevs) {
         this.stdDevs = newStdDevs;
@@ -138,11 +139,11 @@ public abstract class PoseSource {
     }
 
     /**
-     * Pone una estrategia que calcula las desviaciones a partir de la distancia al tag y del numero
-     * de tags visibles. Ver {@link StdDevStrategies}.
+     * Installs a strategy that computes the deviations from the distance to the tag and the number
+     * of visible tags. See {@link StdDevStrategies}.
      *
-     * @param strategy estrategia, o null para volver a las desviaciones fijas.
-     * @return esta misma fuente.
+     * @param strategy the strategy, or null to go back to fixed deviations.
+     * @return this same source.
      */
     public PoseSource setStdDevsStrategy(BiFunction<Double, Integer, Matrix<N3, N1>> strategy) {
         this.stdDevsStrategy = strategy;
@@ -150,12 +151,12 @@ public abstract class PoseSource {
     }
 
     /**
-     * Calcula las desviaciones de una medicion. Las subclases lo llaman al construir su
+     * Computes the deviations for a measurement. Subclasses call this when building their
      * {@link PoseSample}.
      *
-     * @param distanceMeters distancia promedio al tag; se ignora si no hay estrategia.
-     * @param tagCount       numero de tags usados; se ignora si no hay estrategia.
-     * @return el vector de desviaciones.
+     * @param distanceMeters average distance to the tag; ignored when there is no strategy.
+     * @param tagCount       number of tags used; ignored when there is no strategy.
+     * @return the deviation vector.
      */
     public Matrix<N3, N1> computeStdDevs(double distanceMeters, int tagCount) {
         if (stdDevsStrategy == null) {
@@ -165,10 +166,10 @@ public abstract class PoseSource {
     }
 
     /**
-     * Cambia los umbrales de los filtros.
+     * Changes the filter thresholds.
      *
-     * @param newConfig nueva configuracion.
-     * @return esta misma fuente.
+     * @param newConfig the new configuration.
+     * @return this same source.
      */
     public PoseSource setConfig(PoseSourceConfig newConfig) {
         this.config = newConfig;
@@ -176,11 +177,11 @@ public abstract class PoseSource {
     }
 
     /**
-     * Tabla de NetworkTables donde se publica la telemetria. Cambiala si tienes dos
-     * {@link PoseFusion} en el mismo robot y no quieres que se pisen.
+     * NetworkTables table the telemetry is published to. Change it if you have two
+     * {@link PoseFusion} instances on the same robot and do not want them to collide.
      *
-     * @param table nombre de la tabla.
-     * @return esta misma fuente.
+     * @param table table name.
+     * @return this same source.
      */
     public PoseSource setTelemetryTable(String table) {
         this.telemetryTable = table;
@@ -188,35 +189,36 @@ public abstract class PoseSource {
     }
 
     // ------------------------------------------------------------------
-    // Encendido y apagado
+    // Enabling and disabling
     // ------------------------------------------------------------------
 
     /**
-     * Enciende o apaga la fuente desde codigo.
+     * Enables or disables the source from code.
      *
-     * <p>Convive con el interruptor del dashboard sin que ninguno de los dos se pierda: mandan los
-     * dos, y el ultimo en moverse gana. Ver {@link #syncEnabledWithDashboard()}.
+     * <p>It coexists with the dashboard switch without either of them getting lost: both are
+     * authoritative, and whichever moved last wins. See {@link #syncEnabledWithDashboard()}.
      *
-     * @param value true para encenderla.
+     * @param value true to enable it.
      */
     public void setEnabled(boolean value) {
         this.enabled = value;
     }
 
-    /** @return true si la fuente esta encendida. */
+    /** @return true if the source is enabled. */
     public boolean isEnabled() {
         return enabled;
     }
 
     /**
-     * Reconcilia el interruptor del dashboard con el del codigo.
+     * Reconciles the dashboard switch with the one in code.
      *
-     * <p>El detalle importante: se compara el valor de NetworkTables contra <b>lo ultimo que
-     * publicamos nosotros</b>, no contra el estado actual. Si difieren, lo movio una persona desde
-     * el dashboard y ese valor manda; si coinciden, nadie lo toco y manda el del codigo.
+     * <p>The detail that matters: the NetworkTables value is compared against <b>the last value we
+     * published ourselves</b>, not against the current state. If they differ, somebody moved it
+     * from the dashboard and that value wins; if they match, nobody touched it and the code's value
+     * wins.
      *
-     * <p>Sin esa comparacion, leer NetworkTables al principio de cada ciclo sobrescribe en silencio
-     * cualquier {@link #setEnabled(boolean)}, y apagar una fuente desde codigo deja de funcionar.
+     * <p>Without that comparison, reading NetworkTables at the start of every cycle silently
+     * overwrites any {@link #setEnabled(boolean)}, and disabling a source from code stops working.
      */
     void syncEnabledWithDashboard() {
         boolean fromDashboard = NetworkIO.get(telemetryTable, name + "/enabled", lastPublishedEnabled);
@@ -226,13 +228,13 @@ public abstract class PoseSource {
     }
 
     // ------------------------------------------------------------------
-    // Filtros
+    // Filters
     // ------------------------------------------------------------------
 
     /**
-     * Comprueba que el robot no se este moviendo de forma que invalide la medicion.
+     * Checks that the robot is not moving in a way that invalidates the measurement.
      *
-     * @return el motivo del descarte, o {@link RejectionReason#ACCEPTED} si el entorno es valido.
+     * @return the rejection reason, or {@link RejectionReason#ACCEPTED} if the environment is valid.
      */
     RejectionReason checkEnvironment() {
         if (!enabled) {
@@ -258,11 +260,11 @@ public abstract class PoseSource {
     }
 
     /**
-     * Comprueba la medicion en si: que sea nueva, que la pose tenga sentido y que la ambiguedad este
-     * dentro del umbral.
+     * Checks the measurement itself: that it is new, that the pose makes sense and that the
+     * ambiguity is within the threshold.
      *
-     * @param sample medicion a comprobar.
-     * @return el motivo del descarte, o {@link RejectionReason#ACCEPTED}.
+     * @param sample measurement to check.
+     * @return the rejection reason, or {@link RejectionReason#ACCEPTED}.
      */
     RejectionReason checkMeasurement(PoseSample sample) {
         if (!Double.isNaN(lastAcceptedTimestamp)
@@ -282,19 +284,19 @@ public abstract class PoseSource {
     }
 
     /**
-     * Filtro de Mahalanobis: descarta lo que este demasiado lejos de lo que el estimator ya cree,
-     * medido en sigmas de la incertidumbre combinada.
+     * Mahalanobis filter: discards anything too far from what the estimator already believes,
+     * measured in sigmas of the combined uncertainty.
      *
-     * <p>La incertidumbre del estimator crece con el tiempo desde la ultima medicion aceptada, asi
-     * que el filtro se abre solo cuando la fuente lleva rato callada. Eso evita el fallo clasico de
-     * este tipo de puerta: quedarse cerrada para siempre porque el estimator se fue de sitio y ya
-     * nada le parece razonable.
+     * <p>The estimator's uncertainty grows with the time since the last accepted measurement, so
+     * the filter opens up on its own once the source has been quiet for a while. That avoids the
+     * classic failure of this kind of gate: staying shut forever because the estimator wandered off
+     * and nothing looks reasonable to it any more.
      *
-     * <p>La <b>primera</b> medicion se acepta siempre. No hay con que compararla: el estimator
-     * todavia no tiene una creencia que defender.
+     * <p>The <b>first</b> measurement is always accepted. There is nothing to compare it against:
+     * the estimator does not yet hold a belief worth defending.
      *
-     * @param sample medicion a comprobar.
-     * @return el motivo del descarte, o {@link RejectionReason#ACCEPTED}.
+     * @param sample measurement to check.
+     * @return the rejection reason, or {@link RejectionReason#ACCEPTED}.
      */
     RejectionReason checkMahalanobis(PoseSample sample) {
         if (!config.mahalanobisEnabled() || Double.isNaN(lastAcceptedTimestamp)) {
@@ -333,7 +335,7 @@ public abstract class PoseSource {
     }
 
     // ------------------------------------------------------------------
-    // Estado y telemetria
+    // State and telemetry
     // ------------------------------------------------------------------
 
     void markAccepted(double timestampSeconds) {
@@ -346,13 +348,13 @@ public abstract class PoseSource {
     }
 
     /**
-     * Detalle libre que la subclase puede publicar junto al estado.
+     * A free-form detail the subclass can publish alongside the status.
      *
-     * <p>Existe para que {@link RejectionReason#NO_MEASUREMENT} no sea un callejon sin salida: "la
-     * fuente no reporto nada" puede ser que la camara no vea tags, que el headset este
-     * desconectado, o que el timestamp no sirva, y desde el dashboard los tres se ven igual.
+     * <p>It exists so {@link RejectionReason#NO_MEASUREMENT} is not a dead end: "the source
+     * reported nothing" could mean the camera sees no tags, the headset is disconnected, or the
+     * timestamp is unusable, and from the dashboard all three look the same.
      *
-     * @return una linea corta, o cadena vacia si no hay nada que anadir.
+     * @return a short line, or the empty string if there is nothing to add.
      */
     protected String telemetryDetail() {
         return "";
@@ -370,30 +372,30 @@ public abstract class PoseSource {
         lastPublishedEnabled = enabled;
     }
 
-    /** @return nombre de la fuente. */
+    /** @return the source name. */
     public String getName() {
         return name;
     }
 
-    /** @return configuracion vigente. */
+    /** @return the configuration in effect. */
     public PoseSourceConfig getConfig() {
         return config;
     }
 
-    /** @return desviaciones estandar fijas, sin aplicar ninguna estrategia. */
+    /** @return the fixed standard deviations, with no strategy applied. */
     public Matrix<N3, N1> getStdDevs() {
         return stdDevs;
     }
 
-    /** @return por que se descarto --- o no --- la ultima medicion. */
+    /** @return why the last measurement was discarded --- or not. */
     public RejectionReason getLastReason() {
         return lastReason;
     }
 
     /**
-     * Instante de la ultima medicion aceptada.
+     * The instant of the last accepted measurement.
      *
-     * @return el instante, o vacio si todavia no se acepto ninguna.
+     * @return the instant, or empty if none has been accepted yet.
      */
     public OptionalDouble getLastAcceptedTimestamp() {
         return Double.isNaN(lastAcceptedTimestamp)

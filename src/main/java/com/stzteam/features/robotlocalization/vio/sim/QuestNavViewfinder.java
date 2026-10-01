@@ -12,24 +12,25 @@ import org.photonvision.simulation.PhotonCameraSim;
 import org.photonvision.simulation.SimCameraProperties;
 
 /**
- * Un visor de "que esta mirando el headset", para depurar montaje y oclusiones.
+ * A "what is the headset looking at" viewfinder, for debugging mounting and occlusions.
  *
- * <p>Monta una {@code PhotonCameraSim} donde va el Quest y le pide a photonlib que renderice el
- * wireframe del campo y los AprilTags desde ese punto de vista. El resultado sale por
- * {@code CameraServer} como un stream MJPEG llamado <code>&lt;nombre&gt;-raw</code>, visible en
- * Glass, Shuffleboard o AdvantageScope.
+ * <p>It mounts a {@code PhotonCameraSim} where the Quest goes and asks photonlib to render the field
+ * wireframe and the AprilTags from that point of view. The result comes out over
+ * {@code CameraServer} as an MJPEG stream named <code>&lt;name&gt;-raw</code>, visible in Glass,
+ * Shuffleboard or AdvantageScope.
  *
- * <h2>Es cosmetico, y conviene tenerlo claro</h2>
- * Un Quest <b>no localiza viendo AprilTags</b>: hace odometria visual-inercial sobre las features
- * naturales del entorno. Esta imagen no alimenta nada; la pose sale entera de
- * {@link VioErrorModel}. Sirve para ver si el headset queda mirando a la pared, si el bumper le
- * tapa media vista o si el angulo de montaje es el que creias, y para nada mas.
+ * <h2>It is cosmetic, and that is worth being clear about</h2>
+ * A Quest <b>does not localise by seeing AprilTags</b>: it does visual-inertial odometry on the
+ * environment's natural features. This image feeds nothing; the pose comes entirely from
+ * {@link VioErrorModel}. It is there to show whether the headset ends up facing the wall, whether the
+ * bumper blocks half its view, or whether the mounting angle is the one you thought, and nothing
+ * else.
  *
- * <p>Va apagado por defecto porque renderiza con OpenCV en cada frame y eso cuesta CPU de verdad.
+ * <p>It is off by default because it renders with OpenCV on every frame and that costs real CPU.
  *
- * <p>Nota: Gazebo tampoco puede dar esta imagen hoy. El protocolo 0.1.0 de SimulationStudio deja
- * camaras y vision explicitamente fuera de alcance, porque requieren {@code gz-sensors} con
- * rendering. Asi que por ahora este visor es la unica forma de ver algo.
+ * <p>Note: Gazebo cannot give this image today either. SimulationStudio's 0.1.0 protocol leaves
+ * cameras and vision explicitly out of scope, because they require {@code gz-sensors} with
+ * rendering. So for now this viewfinder is the only way to see anything.
  */
 public class QuestNavViewfinder implements AutoCloseable {
 
@@ -38,24 +39,24 @@ public class QuestNavViewfinder implements AutoCloseable {
     private final PhotonCameraSim cameraSim;
 
     /**
-     * Crea el visor y lo engancha al mundo simulado compartido.
+     * Creates the viewfinder and hooks it into the shared simulated world.
      *
-     * @param name           nombre del headset; el stream se llama <code>&lt;nombre&gt;-raw</code>.
-     * @param robotToHeadset transformada del origen del robot al headset.
-     * @param config         configuracion, de donde salen el mundo y el layout del campo.
+     * @param name           the headset's name; the stream is called <code>&lt;name&gt;-raw</code>.
+     * @param robotToHeadset transform from the robot origin to the headset.
+     * @param config         the configuration, where the world and the field layout come from.
      */
     public QuestNavViewfinder(String name, Transform3d robotToHeadset, QuestNavSimConfig config) {
         world = VisionSimWorld.get(config.visionWorldName(), config.fieldLayout());
 
-        // Resolucion y FPS bajos a proposito: esto es un visor, no un sensor. Renderizar a 1280x800
-        // a 90 FPS para una imagen que nadie mide seria tirar CPU.
+        // Low resolution and FPS on purpose: this is a viewfinder, not a sensor. Rendering at
+        // 1280x800 and 90 FPS for an image nobody measures would be throwing CPU away.
         SimCameraProperties properties = new SimCameraProperties();
         properties.setCalibration(640, 480, Rotation2d.fromDegrees(100.0));
         properties.setFPS(30);
 
         camera = new PhotonCamera(name + "-view");
-        // El layout va explicito: el constructor de dos argumentos le mete el campo por defecto de
-        // WPILib, que en 2026.1.1 sigue siendo el de 2025.
+        // The layout is passed explicitly: the two-argument constructor hands it WPILib's default
+        // field, which on 2026.1.1 is still the 2025 one.
         cameraSim = new PhotonCameraSim(camera, properties, config.fieldLayout());
         cameraSim.enableRawStream(true);
         cameraSim.enableDrawWireframe(true);
@@ -65,32 +66,32 @@ public class QuestNavViewfinder implements AutoCloseable {
     }
 
     /**
-     * Avanza el mundo para que se renderice un frame nuevo.
+     * Advances the world so a new frame gets rendered.
      *
-     * <p>Si ya hay camaras simuladas en el mismo mundo, {@link VisionSimWorld} deduplica la llamada
-     * dentro del ciclo, asi que esto no hace trabajo doble.
+     * <p>If there are already simulated cameras in the same world, {@link VisionSimWorld}
+     * deduplicates the call within the cycle, so this does no double work.
      *
-     * @param truePose pose real del robot.
+     * @param truePose the robot's real pose.
      */
     public void update(Pose3d truePose) {
         world.update(truePose);
     }
 
     /**
-     * Mueve el visor cuando cambia el montaje del headset.
+     * Moves the viewfinder when the headset's mounting changes.
      *
-     * @param robotToHeadset nueva transformada robot-&gt;headset.
+     * @param robotToHeadset the new robot-&gt;headset transform.
      */
     public void setRobotToHeadset(Transform3d robotToHeadset) {
         world.sim().adjustCamera(cameraSim, robotToHeadset);
     }
 
-    /** @return el nombre del stream de CameraServer que publica la imagen cruda. */
+    /** @return the name of the CameraServer stream that publishes the raw image. */
     public String streamName() {
         return camera.getName() + "-raw";
     }
 
-    /** Libera la camara de renderizado. */
+    /** Releases the rendering camera. */
     @Override
     public void close() {
         world.sim().removeCamera(cameraSim);

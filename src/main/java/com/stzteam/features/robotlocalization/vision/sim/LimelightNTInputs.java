@@ -7,21 +7,21 @@ import edu.wpi.first.math.geometry.Transform3d;
 import java.util.Optional;
 
 /**
- * Lo que el robot code le escribe al Limelight por NetworkTables.
+ * What the robot code writes to the Limelight over NetworkTables.
  *
- * <p>Un Limelight real no es solo una fuente de datos: tambien lee keys que el robot
- * escribe para configurarlo en caliente. La simulacion las lee y las respeta para que el
- * mismo codigo que llama a {@code LimelightHelpers.SetRobotOrientation} o
- * {@code SetFiducialIDFiltersOverride} tenga efecto aqui tambien.
+ * <p>A real Limelight is not only a data source: it also reads keys the robot writes to
+ * configure it on the fly. The simulation reads and honours them so that the same code
+ * calling {@code LimelightHelpers.SetRobotOrientation} or
+ * {@code SetFiducialIDFiltersOverride} takes effect here too.
  *
- * @param pipeline           indice de pipeline pedido (key {@code pipeline}).
- * @param ledMode            modo de LEDs pedido (key {@code ledMode}).
- * @param throttle           frames a saltarse entre capturas (key {@code throttle_set}).
- * @param robotHeading       yaw del robot para MegaTag2, de {@code robot_orientation_set}.
- * @param fiducialIdFilters  ids validos para localizacion, de {@code fiducial_id_filters_set};
- *                           vacio significa "sin filtro".
- * @param cameraPoseOverride transformada robot-&gt;camara pedida por
- *                           {@code camerapose_robotspace_set}, si el robot la escribio.
+ * @param pipeline           requested pipeline index (key {@code pipeline}).
+ * @param ledMode            requested LED mode (key {@code ledMode}).
+ * @param throttle           frames to skip between captures (key {@code throttle_set}).
+ * @param robotHeading       robot yaw for MegaTag2, from {@code robot_orientation_set}.
+ * @param fiducialIdFilters  ids valid for localization, from {@code fiducial_id_filters_set};
+ *                           empty means "no filter".
+ * @param cameraPoseOverride robot-&gt;camera transform requested by
+ *                           {@code camerapose_robotspace_set}, if the robot wrote one.
  */
 public record LimelightNTInputs(
         int pipeline,
@@ -31,15 +31,15 @@ public record LimelightNTInputs(
         int[] fiducialIdFilters,
         Optional<Transform3d> cameraPoseOverride) {
 
-    /** Entradas neutras: sin filtros, sin heading y sin override de camara. */
+    /** Neutral inputs: no filters, no heading and no camera override. */
     public static final LimelightNTInputs NONE =
             new LimelightNTInputs(0, 0, 0, Optional.empty(), new int[0], Optional.empty());
 
     /**
-     * Indica si un id de AprilTag pasa el filtro que puso el robot code.
+     * Says whether an AprilTag id passes the filter the robot code installed.
      *
-     * @param id id del fiducial.
-     * @return true si no hay filtro o si el id esta en la lista.
+     * @param id fiducial id.
+     * @return true if there is no filter or if the id is in the list.
      */
     public boolean acceptsFiducial(int id) {
         if (fiducialIdFilters.length == 0) {
@@ -53,7 +53,7 @@ public record LimelightNTInputs(
         return false;
     }
 
-    /** @return true si el robot code puso algun filtro de ids. */
+    /** @return true if the robot code installed any id filter. */
     public boolean hasFiducialFilter() {
         return fiducialIdFilters.length > 0;
     }

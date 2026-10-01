@@ -17,10 +17,10 @@ import org.junit.jupiter.api.Test;
 import java.util.Optional;
 
 /**
- * La fuente de Limelight leyendo arrays de {@code botpose} escritos a mano.
+ * The Limelight source reading hand-written {@code botpose} arrays.
  *
- * <p>Sin simulador de por medio: aqui se fija exactamente que hace con cada forma del array,
- * incluido el caso que la simulacion viva destapo.
+ * <p>With no simulator in the way: this pins down exactly what it does with each shape of the array,
+ * including the case the live simulation uncovered.
  */
 class LimelightPoseSourceTest {
 
@@ -48,7 +48,7 @@ class LimelightPoseSourceTest {
         instance.close();
     }
 
-    /** Construye un botpose con N tags, todos con la misma ambiguedad. */
+    /** Builds a botpose with N tags, all with the same ambiguity. */
     private static double[] botpose(int tagCount, double ambiguity) {
         double[] out =
                 new double
@@ -79,20 +79,20 @@ class LimelightPoseSourceTest {
 
         Optional<PoseSample> sample = source.getMeasurement();
 
-        assertTrue(sample.isPresent(), "la medicion existe...");
+        assertTrue(sample.isPresent(), "the measurement exists...");
         assertTrue(source.getAmbiguity().isPresent(), "...y trae ambiguedad");
         assertEquals(0.9, source.getAmbiguity().getAsDouble(), 1e-9);
         assertEquals(
                 RejectionReason.AMBIGUITY,
                 source.checkMeasurement(sample.get()),
-                "con un solo tag el filtro tiene que morder");
+                "with a single tag the filter has to bite");
     }
 
     @Test
     void aMultiTagSolutionIgnoresThePerTagAmbiguity() {
-        // Esto lo destapo la simulacion viva: tres tags a doce metros dan ambiguedades de 0.97 por
-        // tag, pero la pose sale de un PnP multi-tag que no depende de desambiguar ninguno. Filtrar
-        // por ese numero se comia el 100% de los frames buenos.
+        // The live simulation uncovered this: three tags at twelve metres give per-tag ambiguities of
+        // 0.97, but the pose comes from a multi-tag PnP that does not depend on disambiguating any of
+        // them. Filtering on that number ate 100% of the good frames.
         publish(botpose(3, 0.97));
 
         Optional<PoseSample> sample = source.getMeasurement();
@@ -100,11 +100,11 @@ class LimelightPoseSourceTest {
         assertTrue(sample.isPresent());
         assertFalse(
                 source.getAmbiguity().isPresent(),
-                "con varios tags la ambiguedad por tag no significa nada");
+                "with several tags the per-tag ambiguity means nothing");
         assertEquals(
                 RejectionReason.ACCEPTED,
                 source.checkMeasurement(sample.get()),
-                "y por tanto no deberia descartarse");
+                "and therefore it should not be discarded");
     }
 
     @Test
@@ -120,7 +120,7 @@ class LimelightPoseSourceTest {
 
         publish(noTags);
 
-        assertTrue(source.getMeasurement().isEmpty(), "tagCount 0 no es una medicion");
+        assertTrue(source.getMeasurement().isEmpty(), "tagCount 0 is not a measurement");
     }
 
     @Test
@@ -130,13 +130,13 @@ class LimelightPoseSourceTest {
         PoseSample sample = source.getMeasurement().orElseThrow();
 
         double ntNowSeconds = edu.wpi.first.networktables.NetworkTablesJNI.now() / 1e6;
-        // 20 ms de latencia: la captura ocurrio antes de que el valor llegara a NetworkTables.
-        assertTrue(sample.timestampSeconds() < ntNowSeconds, "la captura esta en el pasado");
+        // 20 ms of latency: the capture happened before the value reached NetworkTables.
+        assertTrue(sample.timestampSeconds() < ntNowSeconds, "the capture is in the past");
     }
 
     @Test
     void megaTag2PublishesTheRobotHeadingOnItsOwn() {
-        // Es el paso que mas equipos olvidan, y sin el MegaTag2 no devuelve nada.
+        // It is the step most teams forget, and without it MegaTag2 returns nothing.
         LimelightPoseSource megaTag2 =
                 new LimelightPoseSource(
                         CAMERA,
@@ -163,6 +163,6 @@ class LimelightPoseSourceTest {
         publish(new double[0]);
         source.getMeasurement();
 
-        assertFalse(source.telemetryDetail().isEmpty(), "un NO_MEASUREMENT sin explicacion es inutil");
+        assertFalse(source.telemetryDetail().isEmpty(), "a NO_MEASUREMENT with no explanation is useless");
     }
 }

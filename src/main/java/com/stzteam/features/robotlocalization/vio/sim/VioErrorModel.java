@@ -9,43 +9,44 @@ import edu.wpi.first.math.util.Units;
 import java.util.Random;
 
 /**
- * El modelo de error de la odometria visual-inercial. Es el contenido real de esta feature.
+ * The visual-inertial odometry error model. It is the real content of this feature.
  *
- * <p>Una Limelight ve el tag o no lo ve. Un Quest <b>siempre</b> reporta una pose; lo que cambia es
- * cuanto miente. Simular el protocolo sin simular la mentira daria un sensor perfecto, que es justo
- * el que nadie necesita probar.
+ * <p>A Limelight either sees the tag or it does not. A Quest <b>always</b> reports a pose; what
+ * changes is how much it lies. Simulating the protocol without simulating the lie would give a
+ * perfect sensor, which is exactly the one nobody needs to test against.
  *
- * <h2>Deriva continua</h2>
- * La deriva se escala por <b>distancia recorrida</b>, no por tiempo: un robot parado no deriva, y
- * uno que cruza el campo si. Es como se comporta el VIO real. El yaw deriva por rotacion acumulada,
- * por la misma razon.
+ * <h2>Continuous drift</h2>
+ * The drift scales with <b>distance travelled</b>, not with time: a stationary robot does not drift,
+ * and one crossing the field does. That is how real VIO behaves. The yaw drifts with accumulated
+ * rotation, for the same reason.
  *
- * <h2>Modos de fallo</h2>
- * Los cuatro que documenta QuestNav, cada uno inyectable desde el Sim GUI o desde un test:
+ * <h2>Failure modes</h2>
+ * The four QuestNav documents, each injectable from the Sim GUI or from a test:
  *
  * <ul>
- *   <li><b>Perdida de features</b> (poca luz, reflejos, superficies uniformes). La documentacion
- *       dice que el Quest puede re-adquirir el tracking <i>con un offset</i>, asi que al recuperar
- *       la pose vuelve desplazada. Ese salto es el que rompe a un pose estimator afinado.</li>
- *   <li><b>Doble-tap a passthrough por vibracion</b>: discontinuidad de pose <i>sin</i> perder
- *       tracking. Mas traicionero, porque {@code isTracking} sigue en true.</li>
- *   <li><b>Bateria critica</b>: el headset se apaga solo a media match.</li>
- *   <li><b>Caida de red</b>: se deja de publicar y {@code isConnected()} cae a los 120 ms.</li>
+ *   <li><b>Feature loss</b> (low light, reflections, uniform surfaces). The documentation says the
+ *       Quest may re-acquire tracking <i>with an offset</i>, so when it recovers the pose comes back
+ *       displaced. That jump is what breaks a finely tuned pose estimator.</li>
+ *   <li><b>Vibration-induced double-tap to passthrough</b>: a pose discontinuity <i>without</i>
+ *       losing tracking. More treacherous, because {@code isTracking} stays true.</li>
+ *   <li><b>Critical battery</b>: the headset shuts itself off mid-match.</li>
+ *   <li><b>Network drop</b>: publishing stops and {@code isConnected()} falls after 120 ms.</li>
  * </ul>
  *
- * <p>Los dos ultimos no son error de pose sino ausencia de datos, asi que los gestiona
- * {@link SimulatedQuestNav} consultando {@link #isPoweredOn()} y {@link #isLinkUp(double)}.
+ * <p>The last two are not pose error but absence of data, so {@link SimulatedQuestNav} handles them
+ * by consulting {@link #isPoweredOn()} and {@link #isLinkUp(double)}.
  *
- * <h2>Sobre los valores por defecto</h2>
- * Son <b>plausibles, no medidos</b>. Estan elegidos para que el orden de magnitud sea razonable y
- * para que los fallos se noten en una prueba corta. Si tienes logs de tu propio headset, ajustalos.
+ * <h2>About the default values</h2>
+ * They are <b>plausible, not measured</b>. They are chosen so the order of magnitude is reasonable
+ * and so the failures show up within a short test. If you have logs from your own headset, tune
+ * them.
  *
- * <h2>Simplificacion consciente</h2>
- * La deriva de posicion y la de yaw se modelan como aditivas e independientes. En un VIO real el
- * error de rumbo tambien curva la trayectoria estimada. Reproducir eso requeriria arrastrar un
- * marco de referencia a la deriva, y para el proposito de esta feature --- romper un pose estimator
- * de forma realista --- no cambia nada: lo que importa es que el error crezca con el recorrido, que
- * salte en la re-adquisicion y que un POSE_RESET lo limpie.
+ * <h2>A deliberate simplification</h2>
+ * Position drift and yaw drift are modelled as additive and independent. In a real VIO the heading
+ * error also curves the estimated trajectory. Reproducing that would require dragging a drifting
+ * reference frame around, and for this feature's purpose --- breaking a pose estimator realistically
+ * --- it changes nothing: what matters is that the error grows with distance travelled, that it jumps
+ * on re-acquisition, and that a POSE_RESET clears it.
  */
 public class VioErrorModel {
 
@@ -67,7 +68,7 @@ public class VioErrorModel {
     private double lastSpeedMetersPerSecond = 0.0;
     private double lastAngularSpeedDegreesPerSecond = 0.0;
 
-    // Ventana de mediana para separar un choque de un salto del pose estimator. Ver detectImpact.
+    // Median window to separate a collision from a pose estimator jump. See detectImpact.
     private final double[] speedWindow = new double[3];
     private final double[] angularWindow = new double[3];
     private int windowIndex = 0;
@@ -76,9 +77,9 @@ public class VioErrorModel {
     private double lastMedianAngular = Double.NaN;
 
     /**
-     * Crea el modelo.
+     * Creates the model.
      *
-     * @param config configuracion de la camara simulada, de donde salen todos los parametros.
+     * @param config the simulated camera's configuration, where every parameter comes from.
      */
     public VioErrorModel(QuestNavSimConfig config) {
         this.config = config;
@@ -87,12 +88,12 @@ public class VioErrorModel {
     }
 
     /**
-     * Avanza el modelo un paso y devuelve la pose que el headset deberia reportar.
+     * Advances the model one step and returns the pose the headset should report.
      *
-     * @param truePose    pose real del headset (robot + mount), segun la simulacion.
-     * @param nowSeconds  instante actual, en segundos del FPGA.
-     * @param dtSeconds   tiempo transcurrido desde la llamada anterior.
-     * @return la pose con el error aplicado. Si el tracking esta perdido, la pose congelada.
+     * @param truePose    the headset's real pose (robot + mount), according to the simulation.
+     * @param nowSeconds  the current instant, in FPGA seconds.
+     * @param dtSeconds   time elapsed since the previous call.
+     * @return the pose with the error applied. If tracking is lost, the frozen pose.
      */
     public Pose3d update(Pose3d truePose, double nowSeconds, double dtSeconds) {
         drainBattery(dtSeconds);
@@ -119,15 +120,15 @@ public class VioErrorModel {
         previousTruePose = truePose;
 
         if (nowSeconds < trackingLostUntilSeconds) {
-            // Sin tracking el Quest no tiene nada nuevo que decir: repite la ultima pose buena.
+            // Without tracking the Quest has nothing new to say: it repeats the last good pose.
             tracking = false;
             return frozenPose;
         }
 
         if (!tracking) {
-            // Re-adquisicion. La documentacion de QuestNav avisa de que el tracking puede volver
-            // "con un offset": ese salto es el fallo mas destructivo del sensor y hay que poder
-            // reproducirlo, no suavizarlo.
+            // Re-acquisition. QuestNav's documentation warns that tracking can come back "with an
+            // offset": that jump is the sensor's most destructive failure and it has to be
+            // reproducible, not smoothed away.
             tracking = true;
             driftTranslation = driftTranslation.plus(randomOffset(config.reacquireOffsetMeters()));
         }
@@ -171,30 +172,29 @@ public class VioErrorModel {
     }
 
     /**
-     * Un golpe fuerte le tira el tracking al Quest. Se detecta por aceleracion o aceleracion
-     * angular, no por velocidad: cruzar el campo rapido no rompe nada, chocar contra la pared si.
+     * A hard knock knocks the Quest's tracking out. It is detected from acceleration or angular
+     * acceleration, not from velocity: crossing the field fast breaks nothing, hitting the wall does.
      *
-     * <h2>Por que la velocidad se filtra por mediana</h2>
-     * La pose que entra aqui suele venir del pose estimator del robot, y un pose estimator
-     * <b>salta</b> cada vez que acepta una medicion de vision. Un salto de 20 cm en un frame de
-     * 10 ms son 2000 m/s2 de aceleracion aparente --- cincuenta veces el umbral --- asi que en crudo
-     * el detector confunde cada correccion de vision con un choque.
+     * <h2>Why the velocity is median-filtered</h2>
+     * The pose that comes in here usually comes from the robot's pose estimator, and a pose estimator
+     * <b>jumps</b> every time it accepts a vision measurement. A 20 cm jump in a 10 ms frame is
+     * 2000 m/s2 of apparent acceleration --- fifty times the threshold --- so raw, the detector
+     * mistakes every vision correction for a collision.
      *
-     * <p>Contar frames consecutivos no lo arregla, porque un choque contra la pared tambien es un
-     * solo frame: la pose deja de avanzar de golpe. Lo que de verdad los distingue es la forma.
+     * <p>Counting consecutive frames does not fix it, because hitting the wall is also a single
+     * frame: the pose just stops advancing. What really tells them apart is the shape.
      *
      * <ul>
-     *   <li>Una correccion de vision es un <b>impulso</b>: la velocidad aparente se dispara un frame
-     *       y vuelve al valor que traia.</li>
-     *   <li>Un choque es un <b>escalon</b>: la velocidad venia alta y se queda baja.</li>
+     *   <li>A vision correction is an <b>impulse</b>: the apparent velocity spikes for one frame and
+     *       returns to the value it had.</li>
+     *   <li>A collision is a <b>step</b>: the velocity was high and stays low.</li>
      * </ul>
      *
-     * <p>Una mediana de tres muestras es justo la herramienta para eso: se come los impulsos y
-     * respeta los escalones. La aceleracion se calcula sobre la velocidad filtrada, no sobre la
-     * cruda.
+     * <p>A median of three samples is exactly the tool for that: it eats impulses and respects steps.
+     * The acceleration is computed on the filtered velocity, not on the raw one.
      *
-     * <p>Esto salio corriendo la feature contra una simulacion viva: el Quest perdia el tracking en
-     * el 68% de los ciclos, cada re-adquisicion sumaba su offset, y la pose acababa fuera del campo.
+     * <p>This came out of running the feature against a live simulation: the Quest lost tracking on
+     * 68% of the cycles, each re-acquisition added its offset, and the pose ended up off the field.
      */
     private void detectImpact(
             double speed, double angularSpeed, double dtSeconds, double nowSeconds) {
@@ -228,7 +228,7 @@ public class VioErrorModel {
         lastMedianAngular = medianAngular;
     }
 
-    /** Mediana de tres valores, sin ordenar el array de verdad. */
+    /** Median of three values, without actually sorting the array. */
     private static double median3(double[] values) {
         double a = values[0];
         double b = values[1];
@@ -248,14 +248,14 @@ public class VioErrorModel {
     }
 
     /**
-     * Fuerza una perdida de tracking. Al recuperar, la pose vuelve desplazada.
+     * Forces a tracking loss. On recovery, the pose comes back displaced.
      *
-     * @param durationSeconds cuanto dura la perdida.
-     * @param nowSeconds      instante actual, en segundos del FPGA.
+     * @param durationSeconds how long the loss lasts.
+     * @param nowSeconds      the current instant, in FPGA seconds.
      */
     public void injectTrackingLoss(double durationSeconds, double nowSeconds) {
         if (!tracking && nowSeconds < trackingLostUntilSeconds) {
-            return; // ya estaba perdido, no cuenta como perdida nueva
+            return; // it was already lost; this does not count as a new loss
         }
         tracking = false;
         trackingLostCounter++;
@@ -263,30 +263,30 @@ public class VioErrorModel {
     }
 
     /**
-     * Inyecta una discontinuidad de pose sin perder el tracking. Reproduce el doble-tap a
-     * passthrough que dispara la vibracion del chasis: {@code isTracking} se queda en true, asi que
-     * el robot code no tiene forma de saber que la pose acaba de saltar.
+     * Injects a pose discontinuity without losing tracking. It reproduces the double-tap to
+     * passthrough that chassis vibration triggers: {@code isTracking} stays true, so the robot code
+     * has no way of knowing the pose has just jumped.
      *
-     * @param jump desplazamiento a aplicar, en metros.
+     * @param jump the displacement to apply, in metres.
      */
     public void injectPoseDiscontinuity(Translation3d jump) {
         driftTranslation = driftTranslation.plus(jump);
     }
 
     /**
-     * Simula un corte de red o un cable flojo: se deja de publicar y el robot ve caer
-     * {@code isConnected()} a los 120 ms.
+     * Simulates a network drop or a loose cable: publishing stops and the robot sees
+     * {@code isConnected()} fall after 120 ms.
      *
-     * @param durationSeconds cuanto dura el corte.
-     * @param nowSeconds      instante actual, en segundos del FPGA.
+     * @param durationSeconds how long the drop lasts.
+     * @param nowSeconds      the current instant, in FPGA seconds.
      */
     public void injectLinkLoss(double durationSeconds, double nowSeconds) {
         linkDownUntilSeconds = nowSeconds + durationSeconds;
     }
 
     /**
-     * Borra la deriva acumulada. Lo llama el manejador de POSE_RESET, porque un reset real
-     * reancla el origen del headset y deja el error en cero.
+     * Clears the accumulated drift. The POSE_RESET handler calls it, because a real reset
+     * re-anchors the headset's origin and leaves the error at zero.
      */
     public void resetDrift() {
         driftTranslation = Translation3d.kZero;
@@ -294,50 +294,50 @@ public class VioErrorModel {
     }
 
     /**
-     * Fija la carga de bateria. Util para probar el apagado sin esperar a que se descargue.
+     * Sets the battery charge. Useful to test the shutdown without waiting for it to drain.
      *
-     * @param percent porcentaje de 0 a 100.
+     * @param percent percentage from 0 to 100.
      */
     public void setBatteryPercent(double percent) {
         batteryPercent = Math.max(0.0, Math.min(100.0, percent));
     }
 
-    /** @return true si el headset esta reportando tracking valido. */
+    /** @return true if the headset is reporting valid tracking. */
     public boolean isTracking() {
         return tracking;
     }
 
-    /** @return cuantas veces se ha perdido el tracking desde el arranque. */
+    /** @return how many times tracking has been lost since startup. */
     public int trackingLostCounter() {
         return trackingLostCounter;
     }
 
-    /** @return la carga de bateria, redondeada como la reporta el headset. */
+    /** @return the battery charge, rounded the way the headset reports it. */
     public int batteryPercent() {
         return (int) Math.round(batteryPercent);
     }
 
-    /** @return false cuando la bateria llego a cero y el headset se apago. */
+    /** @return false once the battery hit zero and the headset shut off. */
     public boolean isPoweredOn() {
         return batteryPercent > 0.0;
     }
 
     /**
-     * Indica si el enlace de red esta arriba.
+     * Says whether the network link is up.
      *
-     * @param nowSeconds instante actual, en segundos del FPGA.
-     * @return false mientras dure un corte inyectado.
+     * @param nowSeconds the current instant, in FPGA seconds.
+     * @return false for as long as an injected drop lasts.
      */
     public boolean isLinkUp(double nowSeconds) {
         return nowSeconds >= linkDownUntilSeconds;
     }
 
-    /** @return la deriva de traslacion acumulada, para telemetria. */
+    /** @return the accumulated translation drift, for telemetry. */
     public Translation3d driftTranslation() {
         return driftTranslation;
     }
 
-    /** @return la deriva de yaw acumulada en grados, para telemetria. */
+    /** @return the accumulated yaw drift in degrees, for telemetry. */
     public double driftYawDegrees() {
         return Units.radiansToDegrees(driftYawRadians);
     }

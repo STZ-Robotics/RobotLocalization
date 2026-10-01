@@ -5,21 +5,21 @@ import com.stzteam.features.robotlocalization.generated.FeatureConstants;
 /**
  * RobotLocalization
  *
- * <p>Utilidades de localizacion para MARS.</p>
+ * <p>Localization utilities for MARS.</p>
  *
- * <p>Lo que hay hoy en la feature:</p>
+ * <p>What the feature ships today:</p>
  * <ul>
- *   <li>{@link com.stzteam.features.robotlocalization.vision.sim} &mdash; una Limelight
- *       simulada sobre PhotonVision. Genera detecciones fisicamente coherentes contra el
- *       {@code AprilTagFieldLayout} oficial y las publica con el esquema de NetworkTables de
- *       un Limelight real, ademas de registrarse como {@code SimDevice} de HAL para aparecer
- *       en "Other Devices" del Sim GUI. Punto de entrada:
+ *   <li>{@link com.stzteam.features.robotlocalization.vision.sim} &mdash; a simulated Limelight
+ *       built on PhotonVision. It generates physically coherent detections against the official
+ *       {@code AprilTagFieldLayout} and publishes them using the NetworkTables schema of a real
+ *       Limelight, and also registers itself as a HAL {@code SimDevice} so it shows up under
+ *       "Other Devices" in the Sim GUI. Entry point:
  *       {@link com.stzteam.features.robotlocalization.vision.sim.SimulatedLimelight}.</li>
- *   <li>{@link com.stzteam.features.robotlocalization.vio.sim} &mdash; una QuestNav simulada.
- *       Hace de headset: publica el esquema protobuf de NetworkTables que publica un Meta Quest,
- *       con un modelo de deriva y de los modos de fallo reales del VIO (perdida de tracking con
- *       re-adquisicion desplazada, discontinuidades por vibracion, bateria y red). Punto de
- *       entrada: {@link com.stzteam.features.robotlocalization.vio.sim.SimulatedQuestNav}.</li>
+ *   <li>{@link com.stzteam.features.robotlocalization.vio.sim} &mdash; a simulated QuestNav.
+ *       It stands in for the headset: it publishes the NetworkTables protobuf schema a Meta Quest
+ *       publishes, with a model of drift and of the real VIO failure modes (tracking loss with
+ *       offset re-acquisition, vibration-induced discontinuities, battery and network). Entry
+ *       point: {@link com.stzteam.features.robotlocalization.vio.sim.SimulatedQuestNav}.</li>
  * </ul>
  *
  * <p>Feature ID: RobotLocalization &middot; author: STZ-Robotics</p>
@@ -29,18 +29,18 @@ public final class RobotLocalization {
     private RobotLocalization() {}
 
     /**
-     * Version de la feature, tal y como la declara {@code MarsFeature.json}.
+     * Feature version, exactly as {@code MarsFeature.json} declares it.
      *
-     * @return la version publicada.
+     * @return the published version.
      */
     public static String version() {
         return FeatureConstants.FEATURE_VERSION;
     }
 
     /**
-     * Nombre de la feature.
+     * Feature name.
      *
-     * @return el identificador de la feature.
+     * @return the feature identifier.
      */
     public static String featureName() {
         return FeatureConstants.FEATURE_NAME;

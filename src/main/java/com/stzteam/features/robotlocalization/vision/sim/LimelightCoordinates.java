@@ -15,33 +15,33 @@ import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
 
 /**
- * Conversiones entre las convenciones de WPILib/PhotonVision y las que publica un
- * Limelight real en NetworkTables.
+ * Conversions between the WPILib/PhotonVision conventions and the ones a real Limelight
+ * publishes to NetworkTables.
  *
- * <p>Esta clase existe para que los signos y los ordenes de ejes vivan en un solo
- * sitio, con tests, en vez de repartidos por el traductor. Es el punto mas facil de
- * equivocar de toda la feature.
+ * <p>This class exists so the signs and axis orderings live in one place, with tests,
+ * instead of scattered through the translator. It is the easiest thing in the whole
+ * feature to get wrong.
  *
- * <h2>Convenciones usadas</h2>
+ * <h2>Conventions used</h2>
  * <ul>
- *   <li><b>Field space</b> ({@code botpose*}): identica a WPILib. X+ a lo largo del campo,
- *       Y+ a la izquierda, Z+ arriba, angulos en grados. {@code botpose_wpiblue} usa el
- *       origen azul (el mismo que {@code AprilTagFieldLayout} por defecto),
- *       {@code botpose_wpired} el origen rojo, y {@code botpose} el origen legacy en el
- *       centro del campo.</li>
- *   <li><b>Camera / target space</b> ({@code targetpose_cameraspace} y familia): X+ a la
- *       derecha, Y+ abajo, Z+ saliendo de la camara o del tag. Es un sistema derecho,
- *       relacionado con el de WPILib por una rotacion pura.</li>
+ *   <li><b>Field space</b> ({@code botpose*}): identical to WPILib. X+ along the field,
+ *       Y+ to the left, Z+ up, angles in degrees. {@code botpose_wpiblue} uses the blue
+ *       origin (the same one {@code AprilTagFieldLayout} uses by default),
+ *       {@code botpose_wpired} the red origin, and plain {@code botpose} the legacy origin
+ *       at the centre of the field.</li>
+ *   <li><b>Camera / target space</b> ({@code targetpose_cameraspace} and family): X+ to the
+ *       right, Y+ down, Z+ out of the camera or the tag. It is a right-handed system,
+ *       related to WPILib's by a pure rotation.</li>
  * </ul>
  */
 public final class LimelightCoordinates {
 
     /**
-     * Cambio de base de la convencion WPILib (X adelante, Y izquierda, Z arriba) a la
-     * convencion de camara/target de Limelight (X derecha, Y abajo, Z adelante).
+     * Change of basis from the WPILib convention (X forward, Y left, Z up) to Limelight's
+     * camera/target convention (X right, Y down, Z forward).
      *
-     * <p>Las filas son los ejes de Limelight expresados en coordenadas WPILib. El
-     * determinante es +1, asi que es una rotacion propia y no una reflexion.
+     * <p>The rows are Limelight's axes expressed in WPILib coordinates. The determinant is
+     * +1, so this is a proper rotation and not a reflection.
      */
     private static final Matrix<N3, N3> WPILIB_TO_LIMELIGHT =
             MatBuilder.fill(Nat.N3(), Nat.N3(), 0, -1, 0, 0, 0, -1, 1, 0, 0);
@@ -49,35 +49,35 @@ public final class LimelightCoordinates {
     private LimelightCoordinates() {}
 
     /**
-     * Convierte el yaw de PhotonVision (positivo a la izquierda) al {@code tx} de
-     * Limelight (positivo a la derecha).
+     * Converts PhotonVision's yaw (positive to the left) to Limelight's {@code tx}
+     * (positive to the right).
      *
-     * @param photonYawDegrees yaw reportado por {@code PhotonTrackedTarget#getYaw()}.
-     * @return el valor equivalente de {@code tx}, en grados.
+     * @param photonYawDegrees the yaw reported by {@code PhotonTrackedTarget#getYaw()}.
+     * @return the equivalent {@code tx} value, in degrees.
      */
     public static double yawToTx(double photonYawDegrees) {
         return -photonYawDegrees;
     }
 
     /**
-     * Convierte el pitch de PhotonVision al {@code ty} de Limelight. Ambos usan
-     * positivo hacia arriba, asi que es identidad; existe como metodo para que el
-     * traductor documente la conversion de forma simetrica a {@link #yawToTx(double)}.
+     * Converts PhotonVision's pitch to Limelight's {@code ty}. Both use positive upwards,
+     * so this is the identity; it exists as a method so the translator documents the
+     * conversion symmetrically to {@link #yawToTx(double)}.
      *
-     * @param photonPitchDegrees pitch reportado por {@code PhotonTrackedTarget#getPitch()}.
-     * @return el valor equivalente de {@code ty}, en grados.
+     * @param photonPitchDegrees the pitch reported by {@code PhotonTrackedTarget#getPitch()}.
+     * @return the equivalent {@code ty} value, in degrees.
      */
     public static double pitchToTy(double photonPitchDegrees) {
         return photonPitchDegrees;
     }
 
     /**
-     * Reexpresa una pose de campo con origen azul en el origen rojo, que es lo que
-     * un Limelight publica en {@code botpose_wpired}.
+     * Re-expresses a blue-origin field pose in the red origin, which is what a Limelight
+     * publishes to {@code botpose_wpired}.
      *
-     * @param bluePose pose del robot con origen azul.
-     * @param layout   layout del campo, del que se toman largo y ancho.
-     * @return la misma pose fisica, vista desde el origen rojo.
+     * @param bluePose the robot pose in the blue origin.
+     * @param layout   the field layout, from which the length and width are taken.
+     * @return the same physical pose, seen from the red origin.
      */
     public static Pose3d blueToRed(Pose3d bluePose, AprilTagFieldLayout layout) {
         Pose3d redOrigin =
@@ -90,12 +90,12 @@ public final class LimelightCoordinates {
     }
 
     /**
-     * Reexpresa una pose de campo con origen azul en el origen legacy del centro del
-     * campo, que es lo que un Limelight publica en la key {@code botpose} a secas.
+     * Re-expresses a blue-origin field pose in the legacy field-centre origin, which is
+     * what a Limelight publishes to the plain {@code botpose} key.
      *
-     * @param bluePose pose del robot con origen azul.
-     * @param layout   layout del campo, del que se toman largo y ancho.
-     * @return la misma pose fisica, con el origen trasladado al centro del campo.
+     * @param bluePose the robot pose in the blue origin.
+     * @param layout   the field layout, from which the length and width are taken.
+     * @return the same physical pose, with the origin moved to the centre of the field.
      */
     public static Pose3d blueToFieldCenter(Pose3d bluePose, AprilTagFieldLayout layout) {
         return new Pose3d(
@@ -106,11 +106,11 @@ public final class LimelightCoordinates {
     }
 
     /**
-     * Aplana una pose al formato de 6 doubles que usa Limelight:
-     * {@code [x, y, z, roll, pitch, yaw]}, con metros y grados.
+     * Flattens a pose into the 6-double format Limelight uses:
+     * {@code [x, y, z, roll, pitch, yaw]}, in metres and degrees.
      *
-     * @param pose pose a aplanar.
-     * @return un array de 6 elementos.
+     * @param pose the pose to flatten.
+     * @return a 6-element array.
      */
     public static double[] poseToArray(Pose3d pose) {
         return new double[] {
@@ -124,12 +124,13 @@ public final class LimelightCoordinates {
     }
 
     /**
-     * Convierte una transformada expresada en convencion WPILib (X adelante, Y izquierda,
-     * Z arriba) a los 6 doubles que Limelight publica para camera space y target space
-     * (X derecha, Y abajo, Z adelante).
+     * Converts a transform expressed in the WPILib convention (X forward, Y left, Z up) to
+     * the 6 doubles Limelight publishes for camera space and target space (X right, Y down,
+     * Z forward).
      *
-     * @param transform transformada en convencion WPILib.
-     * @return {@code [x, y, z, roll, pitch, yaw]} en metros y grados, en convencion Limelight.
+     * @param transform the transform in the WPILib convention.
+     * @return {@code [x, y, z, roll, pitch, yaw]} in metres and degrees, in Limelight's
+     *         convention.
      */
     public static double[] toLimelightCameraSpace(Transform3d transform) {
         Translation3d t = transform.getTranslation();
@@ -150,17 +151,18 @@ public final class LimelightCoordinates {
     }
 
     /**
-     * Construye el array de {@code botpose} completo que espera {@code LimelightHelpers}:
-     * 6 valores de pose, 5 de metadatos y 7 por cada fiducial usado.
+     * Builds the complete {@code botpose} array {@code LimelightHelpers} expects: 6 pose
+     * values, 5 metadata values and 7 for each fiducial used.
      *
-     * <p>{@code LimelightHelpers.getBotPoseEstimate} solo rellena {@code rawFiducials} si
-     * la longitud es exactamente {@code 11 + 7 * tagCount}, asi que el numero de
-     * fiduciales pasados aqui tiene que coincidir con el {@code tagCount} publicado.
+     * <p>{@code LimelightHelpers.getBotPoseEstimate} only fills in {@code rawFiducials} if
+     * the length is exactly {@code 11 + 7 * tagCount}, so the number of fiducials passed
+     * here has to match the published {@code tagCount}.
      *
-     * @param pose      pose del robot, ya en el origen que corresponda a la key.
-     * @param frame     frame del que se toman latencia, span, distancia y area promedio.
-     * @param fiducials fiduciales a anexar; su longitud define el {@code tagCount} publicado.
-     * @return el array listo para {@code setDoubleArray}.
+     * @param pose      the robot pose, already in whichever origin the key calls for.
+     * @param frame     the frame the latency, span, distance and average area are taken from.
+     * @param fiducials the fiducials to append; their length defines the published
+     *                  {@code tagCount}.
+     * @return the array ready for {@code setDoubleArray}.
      */
     public static double[] botposeArray(
             Pose3d pose, LimelightFrame frame, LimelightFrame.RawFiducial[] fiducials) {
@@ -192,11 +194,11 @@ public final class LimelightCoordinates {
     }
 
     /**
-     * Aplana los fiduciales al formato de la key {@code rawfiducials}: 7 doubles por tag,
-     * sin cabecera.
+     * Flattens the fiducials into the format of the {@code rawfiducials} key: 7 doubles per
+     * tag, with no header.
      *
-     * @param fiducials fiduciales visibles.
-     * @return el array aplanado.
+     * @param fiducials the visible fiducials.
+     * @return the flattened array.
      */
     public static double[] rawFiducialsArray(LimelightFrame.RawFiducial[] fiducials) {
         double[] out = new double[fiducials.length * 7];

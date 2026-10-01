@@ -20,8 +20,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Comprueba que la tabla publicada es la que un consumidor de Limelight espera encontrar:
- * mismos nombres de key, mismas unidades y mismos largos de array.
+ * Checks that the published table is the one a Limelight consumer expects to find: same key
+ * names, same units and same array lengths.
  */
 class LimelightNTPublisherTest {
 
@@ -110,8 +110,8 @@ class LimelightNTPublisherTest {
     void botposeIsEmptyWhenThereIsNoEstimate() {
         publisher.publish(LimelightFrame.empty(20.0, 0.0, 1.0), LimelightNTInputs.NONE);
 
-        // Un array vacio hace que LimelightHelpers devuelva un PoseEstimate con tagCount 0,
-        // que es la forma canonica de decir "no confies en esto".
+        // An empty array makes LimelightHelpers return a PoseEstimate with tagCount 0, which is the
+        // canonical way of saying "do not trust this".
         assertEquals(0, table.getEntry("botpose_wpiblue").getDoubleArray(new double[] {1.0}).length);
         assertEquals(0.0, table.getEntry("tv").getDouble(-1.0), EPS);
         assertEquals(-1.0, table.getEntry("tid").getDouble(0.0), EPS);
@@ -127,35 +127,35 @@ class LimelightNTPublisherTest {
 
     @Test
     void theDefaultFieldIs2026AndNot2025() {
-        // WPILib 2026.1.1 solo llega hasta k2025ReefscapeWelded, asi que kDefaultField devuelve el
-        // campo del ano pasado sin avisar: 22 tags donde deberia haber 32, y todo lo demas
-        // aparentemente funcionando. La feature trae su propia copia del oficial.
+        // WPILib 2026.1.1 only goes up to k2025ReefscapeWelded, so kDefaultField silently returns
+        // last year's field: 22 tags where there should be 32, and everything else apparently
+        // working. The feature carries its own copy of the official one.
         var field = com.stzteam.features.robotlocalization.FieldLayouts.defaultField();
 
-        assertEquals(32, field.getTags().size(), "el campo 2026 Rebuilt tiene 32 tags");
+        assertEquals(32, field.getTags().size(), "the 2026 Rebuilt field has 32 tags");
         assertEquals(16.541, field.getFieldLength(), 1e-3);
         assertEquals(8.069, field.getFieldWidth(), 1e-3);
     }
 
     @Test
     void unusedBotposeOriginsCanBeTurnedOffToSaveBandwidth() {
-        // Seis arrays de 32 doubles a la tasa de la camara son 0.19 Mbps medidos, y casi todo el
-        // mundo lee uno solo.
+        // Six arrays of 32 doubles at the camera's rate is a measured 0.19 Mbps, and almost everybody
+        // reads just one.
         config.withBotposeVariants(LimelightSimConfig.BotposeVariant.WPI_BLUE);
 
         publisher.publish(frameWithTarget(), LimelightNTInputs.NONE);
 
         assertTrue(
                 table.getEntry("botpose_wpiblue").getDoubleArray(new double[0]).length > 0,
-                "el azul si se publica");
+                "the blue one does get published");
         assertEquals(
                 0,
                 table.getEntry("botpose_wpired").getDoubleArray(new double[0]).length,
-                "el rojo no deberia haberse tocado");
+                "the red one should not have been touched");
         assertEquals(
                 0,
                 table.getEntry("botpose").getDoubleArray(new double[0]).length,
-                "el legacy tampoco");
+                "nor the legacy one");
     }
 
     @Test
@@ -165,7 +165,7 @@ class LimelightNTPublisherTest {
         for (String key : new String[] {"botpose", "botpose_wpiblue", "botpose_wpired"}) {
             assertTrue(
                     table.getEntry(key).getDoubleArray(new double[0]).length > 0,
-                    key + " deberia publicarse por defecto, como en el hardware real");
+                    key + " should be published by default, as on the real hardware");
         }
     }
 
@@ -181,8 +181,8 @@ class LimelightNTPublisherTest {
 
     @Test
     void readsBackWhatTheRobotCodeWrites() {
-        // Lo mismo que hacen LimelightHelpers.SetRobotOrientation,
-        // SetFiducialIDFiltersOverride y setPipelineIndex.
+        // The same thing LimelightHelpers.SetRobotOrientation, SetFiducialIDFiltersOverride and
+        // setPipelineIndex do.
         table.getEntry("robot_orientation_set")
                 .setDoubleArray(new double[] {45.0, 0.0, 0.0, 0.0, 0.0, 0.0});
         table.getEntry("fiducial_id_filters_set").setDoubleArray(new double[] {3.0, 5.0});

@@ -15,25 +15,25 @@ import edu.wpi.first.networktables.NetworkTableInstance;
 import java.util.Optional;
 
 /**
- * Escribe en NetworkTables el esquema exacto de keys que publica un Limelight real.
+ * Writes to NetworkTables the exact schema of keys a real Limelight publishes.
  *
- * <p>Es la pieza que hace que el robot code no se entere de que esta en simulacion:
- * {@code LimelightHelpers}, Glass, OutlineViewer o una lectura directa de NT ven la misma
- * tabla con los mismos nombres, unidades y formatos de array.
+ * <p>This is the piece that keeps the robot code from ever noticing it is in simulation:
+ * {@code LimelightHelpers}, Glass, OutlineViewer or a direct NT read all see the same table
+ * with the same names, units and array formats.
  *
- * <p>Tambien lee las keys que el robot code escribe hacia la camara
- * ({@code pipeline}, {@code robot_orientation_set}, {@code fiducial_id_filters_set}...)
- * y las expone como {@link LimelightNTInputs}, para que la simulacion las respete.
+ * <p>It also reads the keys the robot code writes towards the camera ({@code pipeline},
+ * {@code robot_orientation_set}, {@code fiducial_id_filters_set}...) and exposes them as
+ * {@link LimelightNTInputs}, so the simulation honours them.
  *
- * <h2>Lo que esta feature no publica</h2>
- * La key {@code json} (el volcado completo que consume
- * {@code LimelightHelpers.getLatestResults}) queda fuera de esta iteracion: reproducir ese
- * esquema entero no aporta nada que las keys individuales no den ya. Si tu robot code
- * depende de {@code getLatestResults}, sustituyelo por los getters directos.
+ * <h2>What this feature does not publish</h2>
+ * The {@code json} key (the full dump {@code LimelightHelpers.getLatestResults} consumes) is
+ * out of scope for this iteration: reproducing that whole schema adds nothing the individual
+ * keys do not already give. If your robot code depends on {@code getLatestResults}, replace
+ * it with the direct getters.
  */
 public class LimelightNTPublisher {
 
-    /** Limite al que un Limelight real reinicia su heartbeat. */
+    /** The limit at which a real Limelight restarts its heartbeat. */
     private static final long HEARTBEAT_ROLLOVER = 2_000_000_000L;
 
     private static final double[] EMPTY = new double[0];
@@ -81,20 +81,20 @@ public class LimelightNTPublisher {
     private long heartbeat = 0;
 
     /**
-     * Crea el publicador sobre la tabla configurada.
+     * Creates the publisher on the configured table.
      *
-     * @param config configuracion de la camara simulada.
+     * @param config the simulated camera's configuration.
      */
     public LimelightNTPublisher(LimelightSimConfig config) {
         this(config, NetworkTableInstance.getDefault());
     }
 
     /**
-     * Crea el publicador sobre una instancia concreta de NetworkTables. Pensado para tests,
-     * donde conviene una instancia aislada en vez de la global.
+     * Creates the publisher on a specific NetworkTables instance. Meant for tests, where an
+     * isolated instance is preferable to the global one.
      *
-     * @param config   configuracion de la camara simulada.
-     * @param instance instancia de NetworkTables a usar.
+     * @param config   the simulated camera's configuration.
+     * @param instance the NetworkTables instance to use.
      */
     public LimelightNTPublisher(LimelightSimConfig config, NetworkTableInstance instance) {
         this.config = config;
@@ -138,20 +138,20 @@ public class LimelightNTPublisher {
         this.cameraPoseSetEntry = table.getEntry("camerapose_robotspace_set");
     }
 
-    /** @return la tabla de NetworkTables sobre la que se publica. */
+    /** @return the NetworkTables table being published to. */
     public NetworkTable table() {
         return table;
     }
 
     /**
-     * Lee las keys que el robot code escribe hacia la camara.
+     * Reads the keys the robot code writes towards the camera.
      *
-     * <p>{@code camerapose_robotspace_set} se interpreta como
-     * {@code [adelante, izquierda, arriba, roll, pitch, yaw]} en convencion WPILib, con
-     * metros y grados. Es la interpretacion que hace que el override sea consistente con el
-     * {@code Transform3d} que le pasas al constructor de {@link SimulatedLimelight}.
+     * <p>{@code camerapose_robotspace_set} is interpreted as
+     * {@code [forward, left, up, roll, pitch, yaw]} in the WPILib convention, in metres and
+     * degrees. That is the interpretation that makes the override consistent with the
+     * {@code Transform3d} you pass to {@link SimulatedLimelight}'s constructor.
      *
-     * @return una instantanea de las entradas.
+     * @return a snapshot of the inputs.
      */
     public LimelightNTInputs readInputs() {
         double[] orientation = robotOrientationEntry.getDoubleArray(EMPTY);
@@ -188,12 +188,11 @@ public class LimelightNTPublisher {
     }
 
     /**
-     * Publica un frame completo. Todas las keys de un mismo frame se escriben en la misma
-     * llamada, asi que un consumidor nunca ve {@code tv} de un ciclo con {@code botpose} de
-     * otro.
+     * Publishes a complete frame. Every key of a given frame is written in the same call, so a
+     * consumer never sees {@code tv} from one cycle alongside {@code botpose} from another.
      *
-     * @param frame  frame ya traducido.
-     * @param inputs entradas leidas este ciclo, para ecos como {@code getpipe}.
+     * @param frame  the already translated frame.
+     * @param inputs the inputs read this cycle, for echoes such as {@code getpipe}.
      */
     public void publish(LimelightFrame frame, LimelightNTInputs inputs) {
         tvEntry.setDouble(frame.hasTarget() ? 1.0 : 0.0);
@@ -238,8 +237,8 @@ public class LimelightNTPublisher {
                 frame.fiducials());
 
         if (config.publishMegaTag2()) {
-            // Mismos fiduciales que MegaTag1: LimelightHelpers parsea las keys _orb con el
-            // mismo formato 11 + 7n, solo cambia el flag isMegaTag2 del PoseEstimate.
+            // Same fiducials as MegaTag1: LimelightHelpers parses the _orb keys with the same
+            // 11 + 7n format, only the PoseEstimate's isMegaTag2 flag changes.
             publishPoseFamily(
                     frame,
                     frame.megaTag2Pose(),
@@ -266,8 +265,8 @@ public class LimelightNTPublisher {
                 config.publishesBotposeVariant(LimelightSimConfig.BotposeVariant.WPI_RED);
 
         if (bluePose.isEmpty()) {
-            // Los origenes desactivados no se tocan siquiera: publicar un array vacio cada ciclo
-            // gasta ancho de banda para decir lo mismo que no publicar nada.
+            // Disabled origins are not touched at all: publishing an empty array every cycle spends
+            // bandwidth to say the same thing as publishing nothing.
             if (wantsCenter) {
                 centerEntry.setDoubleArray(EMPTY);
             }
@@ -322,8 +321,8 @@ public class LimelightNTPublisher {
     }
 
     /**
-     * Construye la key {@code t2d}, el array de 17 metricas de targeting que un Limelight
-     * publica de golpe. El orden lo fija el propio {@code LimelightHelpers}.
+     * Builds the {@code t2d} key, the array of 17 targeting metrics a Limelight publishes in one
+     * go. {@code LimelightHelpers} itself fixes the order.
      */
     private double[] buildT2d(LimelightFrame frame) {
         LimelightFrame.PixelMetrics pixels = frame.targetPixelMetrics();

@@ -14,22 +14,22 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Registro de mundos simulados compartidos.
+ * A registry of shared simulated worlds.
  *
- * <p>Un {@code VisionSystemSim} representa un campo con sus AprilTags y todas las camaras
- * que lo miran. Varias {@link SimulatedLimelight} que declaren el mismo nombre de mundo
- * comparten una sola instancia, que es lo que hace falta para multi-camara: los tags se
- * cargan una vez y la pose del robot se propaga a todas las camaras de golpe.
+ * <p>A {@code VisionSystemSim} represents a field with its AprilTags and every camera looking
+ * at it. Several {@link SimulatedLimelight} instances declaring the same world name share a
+ * single instance, which is what multi-camera setups need: the tags load once and the robot
+ * pose propagates to every camera at once.
  *
- * <p>La actualizacion se deduplica dentro de un mismo ciclo, asi que da igual si llamas a
- * {@link SimulatedLimelight#periodic(Pose2d)} en cada camara o a
- * {@link #updateAll(Pose2d)} una sola vez: el mundo avanza una vez por ciclo.
+ * <p>Updates are deduplicated within one cycle, so it makes no difference whether you call
+ * {@link SimulatedLimelight#periodic(Pose2d)} on each camera or {@link #updateAll(Pose2d)}
+ * once: the world advances once per cycle.
  */
 public final class VisionSimWorld {
 
     /**
-     * Ventana de deduplicacion. Dos llamadas dentro de este margen se consideran el mismo
-     * ciclo del robot; el periodo tipico de 20 ms lo supera de sobra.
+     * The deduplication window. Two calls within this margin count as the same robot cycle;
+     * the typical 20 ms period clears it comfortably.
      */
     private static final double SAME_LOOP_WINDOW_SECONDS = 0.001;
 
@@ -46,33 +46,33 @@ public final class VisionSimWorld {
     }
 
     /**
-     * Devuelve el mundo con ese nombre, creandolo con el layout dado si es la primera vez.
+     * Returns the world with that name, creating it with the given layout the first time.
      *
-     * <p>Si el mundo ya existia se ignora el layout: el primero en pedirlo lo define. Eso
-     * evita que dos camaras con configuraciones distintas se pisen los tags.
+     * <p>If the world already existed the layout is ignored: whoever asked first defines it. That
+     * keeps two cameras with different configurations from trampling each other's tags.
      *
-     * @param name   identificador del mundo.
-     * @param layout layout de AprilTags a cargar si hay que crearlo.
-     * @return el mundo compartido.
+     * @param name   world identifier.
+     * @param layout the AprilTag layout to load if it has to be created.
+     * @return the shared world.
      */
     public static synchronized VisionSimWorld get(String name, AprilTagFieldLayout layout) {
         return WORLDS.computeIfAbsent(name, key -> new VisionSimWorld(key, layout));
     }
 
     /**
-     * Avanza todos los mundos registrados con la misma pose del robot. Atajo para el caso
-     * normal de un solo robot con una o varias camaras.
+     * Advances every registered world with the same robot pose. A shortcut for the normal case
+     * of a single robot with one or several cameras.
      *
-     * @param robotPose pose simulada actual del robot.
+     * @param robotPose the robot's current simulated pose.
      */
     public static synchronized void updateAll(Pose2d robotPose) {
         updateAll(new Pose3d(robotPose));
     }
 
     /**
-     * Avanza todos los mundos registrados con la misma pose del robot.
+     * Advances every registered world with the same robot pose.
      *
-     * @param robotPose pose simulada actual del robot.
+     * @param robotPose the robot's current simulated pose.
      */
     public static synchronized void updateAll(Pose3d robotPose) {
         for (VisionSimWorld world : WORLDS.values()) {
@@ -81,26 +81,26 @@ public final class VisionSimWorld {
     }
 
     /**
-     * Devuelve los mundos registrados hasta ahora.
+     * Returns the worlds registered so far.
      *
-     * @return la coleccion de mundos, en orden de creacion.
+     * @return the collection of worlds, in creation order.
      */
     public static synchronized Collection<VisionSimWorld> all() {
         return WORLDS.values();
     }
 
     /**
-     * Olvida todos los mundos registrados. Pensado para tests, donde cada caso quiere
-     * partir de un campo limpio.
+     * Forgets every registered world. Meant for tests, where each case wants to start from a
+     * clean field.
      */
     public static synchronized void reset() {
         WORLDS.clear();
     }
 
     /**
-     * Avanza este mundo. Si ya se avanzo en este mismo ciclo, no hace nada.
+     * Advances this world. If it already advanced in this same cycle, it does nothing.
      *
-     * @param robotPose pose simulada actual del robot.
+     * @param robotPose the robot's current simulated pose.
      */
     public void update(Pose3d robotPose) {
         double now = Timer.getFPGATimestamp();
@@ -112,31 +112,31 @@ public final class VisionSimWorld {
     }
 
     /**
-     * Reposiciona el robot en el mundo sin generar frames, util al reiniciar una rutina
-     * de autonomo o al colocar el robot desde el Sim GUI.
+     * Repositions the robot in the world without generating frames, useful when restarting an
+     * autonomous routine or when placing the robot from the Sim GUI.
      *
-     * @param robotPose nueva pose del robot.
+     * @param robotPose the robot's new pose.
      */
     public void resetRobotPose(Pose3d robotPose) {
         sim.resetRobotPose(robotPose);
     }
 
-    /** @return el nombre de este mundo. */
+    /** @return this world's name. */
     public String name() {
         return name;
     }
 
-    /** @return el {@code VisionSystemSim} subyacente, por si necesitas su API completa. */
+    /** @return the underlying {@code VisionSystemSim}, in case you need its full API. */
     public VisionSystemSim sim() {
         return sim;
     }
 
     /**
-     * Campo de depuracion que photonlib mantiene con la pose del robot, las camaras y los
-     * targets visibles. Publicalo en un {@code SmartDashboard} o en Glass para ver que
-     * esta mirando la camara.
+     * The debug field photonlib maintains with the robot pose, the cameras and the visible
+     * targets. Publish it to a {@code SmartDashboard} or to Glass to see what the camera is
+     * looking at.
      *
-     * @return el {@code Field2d} de depuracion.
+     * @return the debug {@code Field2d}.
      */
     public Field2d debugField() {
         return sim.getDebugField();

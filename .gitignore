@@ -1,9 +1,10 @@
 .gradle/
 build/
+bin/
 .DS_Store
 *.class
 *.log
 .vscode/
 src/main/java/com/stzteam/mars/generated/
-# Artefactos que deja el servidor de NetworkTables al correr los tests de simulacion
+# Artifacts left behind by the NetworkTables server when the simulation tests run
 networktables.json

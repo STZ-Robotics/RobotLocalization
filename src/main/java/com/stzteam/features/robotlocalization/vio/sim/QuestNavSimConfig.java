@@ -8,9 +8,9 @@ import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import gg.questnav.questnav.BuildConfig;
 
 /**
- * Configuracion de una {@link SimulatedQuestNav}.
+ * Configuration for a {@link SimulatedQuestNav}.
  *
- * <p>Los setters son fluidos, igual que en {@code LimelightSimConfig}:
+ * <p>The setters are fluent, just as in {@code LimelightSimConfig}:
  *
  * <pre>{@code
  * var config = new QuestNavSimConfig()
@@ -18,10 +18,10 @@ import gg.questnav.questnav.BuildConfig;
  *         .withRandomizedOrigin(true);
  * }</pre>
  *
- * <h2>Sobre los valores por defecto del modelo de error</h2>
- * Son <b>plausibles, no medidos</b>. Estan elegidos para que el orden de magnitud sea razonable
- * (un Quest bien montado deriva poco) y para que los fallos se noten en una prueba corta. Si tienes
- * logs de tu propio headset, ajustalos; no los trates como una caracterizacion del hardware.
+ * <h2>About the error model's default values</h2>
+ * They are <b>plausible, not measured</b>. They are chosen so the order of magnitude is reasonable
+ * (a well-mounted Quest drifts little) and so the failures show up within a short test. If you have
+ * logs from your own headset, tune them; do not treat them as a characterisation of the hardware.
  */
 public class QuestNavSimConfig {
 
@@ -61,14 +61,14 @@ public class QuestNavSimConfig {
     private double initialBatteryPercent = 100.0;
     private double batteryDrainPercentPerMinute = 0.5;
 
-    /** Crea una configuracion con los valores por defecto. */
+    /** Creates a configuration with the default values. */
     public QuestNavSimConfig() {}
 
     /**
-     * Preset sin ningun error: la pose publicada es la verdad exacta. Util para aislar un bug del
-     * robot code sin que el ruido estorbe, y como punto de partida de un test.
+     * A preset with no error at all: the published pose is the exact truth. Useful to isolate a bug
+     * in the robot code without noise getting in the way, and as a starting point for a test.
      *
-     * @return una configuracion sin deriva, ruido ni fallos automaticos.
+     * @return a configuration with no drift, no noise and no automatic failures.
      */
     public static QuestNavSimConfig perfect() {
         return new QuestNavSimConfig()
@@ -80,11 +80,11 @@ public class QuestNavSimConfig {
     }
 
     /**
-     * Nombre de la tabla de NetworkTables. Solo se cambia para tests: el robot code de produccion
-     * habla contra {@code "QuestNav"}, que es lo que tiene fijado {@code questnavlib}.
+     * NetworkTables table name. Only changed for tests: production robot code talks to
+     * {@code "QuestNav"}, which is what {@code questnavlib} has hardcoded.
      *
-     * @param name nombre de la tabla.
-     * @return esta misma configuracion.
+     * @param name table name.
+     * @return this same configuration.
      */
     public QuestNavSimConfig withTableName(String name) {
         this.tableName = name;
@@ -92,12 +92,12 @@ public class QuestNavSimConfig {
     }
 
     /**
-     * Version que se publica en el topic {@code version}. Por defecto es la del propio
-     * {@code questnavlib} del classpath, asi que el chequeo de version del robot code pasa siempre.
-     * Cambiala para probar que tu codigo avisa de un desajuste.
+     * The version published to the {@code version} topic. By default it is that of the
+     * {@code questnavlib} on the classpath, so the robot code's version check always passes. Change
+     * it to test that your code warns about a mismatch.
      *
-     * @param version cadena de version.
-     * @return esta misma configuracion.
+     * @param version version string.
+     * @return this same configuration.
      */
     public QuestNavSimConfig withVersion(String version) {
         this.version = version;
@@ -105,11 +105,11 @@ public class QuestNavSimConfig {
     }
 
     /**
-     * Semilla del generador de ruido. Fijarla hace que una corrida sea reproducible, que es lo que
-     * quieres en un test.
+     * Seed of the noise generator. Pinning it makes a run reproducible, which is what you want in a
+     * test.
      *
-     * @param seed semilla.
-     * @return esta misma configuracion.
+     * @param seed the seed.
+     * @return this same configuration.
      */
     public QuestNavSimConfig withRandomSeed(long seed) {
         this.randomSeed = seed;
@@ -117,10 +117,10 @@ public class QuestNavSimConfig {
     }
 
     /**
-     * Controla si se registra el {@code SimDevice} de HAL que aparece en "Other Devices".
+     * Controls whether the HAL {@code SimDevice} that shows up under "Other Devices" is registered.
      *
-     * @param enabled true para registrarlo.
-     * @return esta misma configuracion.
+     * @param enabled true to register it.
+     * @return this same configuration.
      */
     public QuestNavSimConfig withSimDevice(boolean enabled) {
         this.createSimDevice = enabled;
@@ -128,10 +128,10 @@ public class QuestNavSimConfig {
     }
 
     /**
-     * Controla la publicacion de poses de telemetria para AdvantageScope y del {@code Field2d}.
+     * Controls publication of the telemetry poses for AdvantageScope and of the {@code Field2d}.
      *
-     * @param enabled true para publicarlas.
-     * @return esta misma configuracion.
+     * @param enabled true to publish them.
+     * @return this same configuration.
      */
     public QuestNavSimConfig withTelemetry(boolean enabled) {
         this.publishTelemetry = enabled;
@@ -139,15 +139,16 @@ public class QuestNavSimConfig {
     }
 
     /**
-     * Enciende el visor MJPEG: un {@code PhotonCameraSim} montado donde va el headset, que renderiza
-     * el wireframe del campo desde su punto de vista y lo publica por {@code CameraServer}.
+     * Switches on the MJPEG viewfinder: a {@code PhotonCameraSim} mounted where the headset goes,
+     * which renders the field wireframe from its point of view and publishes it over
+     * {@code CameraServer}.
      *
-     * <p><b>Es cosmetico.</b> No alimenta la pose: el Quest localiza por odometria visual-inercial,
-     * no viendo AprilTags. Va apagado por defecto porque renderiza con OpenCV en cada frame y eso
-     * cuesta CPU de verdad.
+     * <p><b>It is cosmetic.</b> It does not feed the pose: the Quest localises by visual-inertial
+     * odometry, not by seeing AprilTags. It is off by default because it renders with OpenCV on every
+     * frame and that costs real CPU.
      *
-     * @param enabled true para encenderlo.
-     * @return esta misma configuracion.
+     * @param enabled true to switch it on.
+     * @return this same configuration.
      */
     public QuestNavSimConfig withViewfinder(boolean enabled) {
         this.viewfinder = enabled;
@@ -155,11 +156,11 @@ public class QuestNavSimConfig {
     }
 
     /**
-     * Mundo simulado compartido que usa el visor. Ponlo igual que el de tus camaras para que todo
-     * comparta un solo {@code VisionSystemSim}.
+     * The shared simulated world the viewfinder uses. Set it to the same one as your cameras so
+     * everything shares a single {@code VisionSystemSim}.
      *
-     * @param name identificador del mundo.
-     * @return esta misma configuracion.
+     * @param name world identifier.
+     * @return this same configuration.
      */
     public QuestNavSimConfig withVisionWorld(String name) {
         this.visionWorldName = name;
@@ -167,11 +168,12 @@ public class QuestNavSimConfig {
     }
 
     /**
-     * Layout de AprilTags que dibuja el visor. Solo se usa para renderizar: el Quest no localiza con
-     * tags. Si el mundo simulado ya existe porque lo creo otra camara, manda el layout de aquella.
+     * The AprilTag layout the viewfinder draws. It is only used for rendering: the Quest does not
+     * localise with tags. If the simulated world already exists because another camera created it,
+     * that camera's layout wins.
      *
-     * @param layout layout del campo.
-     * @return esta misma configuracion.
+     * @param layout the field layout.
+     * @return this same configuration.
      */
     public QuestNavSimConfig withFieldLayout(AprilTagFieldLayout layout) {
         this.fieldLayout = layout;
@@ -179,10 +181,10 @@ public class QuestNavSimConfig {
     }
 
     /**
-     * Frecuencia a la que el headset publica frames. El hardware real va a 100 Hz.
+     * Rate at which the headset publishes frames. The real hardware runs at 100 Hz.
      *
-     * @param hz frecuencia en hercios.
-     * @return esta misma configuracion.
+     * @param hz rate in hertz.
+     * @return this same configuration.
      */
     public QuestNavSimConfig withFrameRateHz(double hz) {
         this.frameRateHz = hz;
@@ -190,10 +192,10 @@ public class QuestNavSimConfig {
     }
 
     /**
-     * Frecuencia de {@code deviceData} (bateria y contador de perdidas). El hardware real va a 3 Hz.
+     * Rate of {@code deviceData} (battery and loss counter). The real hardware runs at 3 Hz.
      *
-     * @param hz frecuencia en hercios.
-     * @return esta misma configuracion.
+     * @param hz rate in hertz.
+     * @return this same configuration.
      */
     public QuestNavSimConfig withDeviceDataRateHz(double hz) {
         this.deviceDataRateHz = hz;
@@ -201,31 +203,31 @@ public class QuestNavSimConfig {
     }
 
     /**
-     * Publica desde una instancia de NetworkTables aparte, conectada como cliente al servidor NT
-     * del propio robot, en vez de escribir directamente en la instancia global.
+     * Publishes from a separate NetworkTables instance, connected as a client to the robot's own NT
+     * server, instead of writing directly to the global instance.
      *
-     * <h2>Por que existe esta opcion</h2>
-     * {@code PoseFrame.dataTimestamp()} --- el valor que hay que meterle a
-     * {@code addVisionMeasurement} --- no sale del protobuf: sale del {@code serverTime} que
-     * NetworkTables le pone a cada valor. Y ese {@code serverTime} lo asigna el <b>servidor al
-     * recibir</b>. Cuando el publicador vive en la misma instancia que el consumidor, ntcore marca
-     * los valores con el centinela {@code serverTime = 1}, asi que {@code dataTimestamp()} sale
-     * 1 microsegundo constante y cualquier fusion por timestamp se va al suelo.
+     * <h2>Why this option exists</h2>
+     * {@code PoseFrame.dataTimestamp()} --- the value you have to feed {@code addVisionMeasurement}
+     * --- does not come from the protobuf: it comes from the {@code serverTime} NetworkTables stamps
+     * on each value. And that {@code serverTime} is assigned by the <b>server on receipt</b>. When the
+     * publisher lives in the same instance as the consumer, ntcore marks the values with the sentinel
+     * {@code serverTime = 1}, so {@code dataTimestamp()} comes out as a constant 1 microsecond and any
+     * timestamp-based fusion falls apart.
      *
-     * <p>Con esta opcion encendida la simulacion reproduce la topologia real --- el headset es un
-     * cliente NT4 y el robot es el servidor --- y los timestamps salen correctos, con latencia de
-     * red incluida.
+     * <p>With this option on, the simulation reproduces the real topology --- the headset is an NT4
+     * client and the robot is the server --- and the timestamps come out correct, network latency
+     * included.
      *
-     * <h2>Por que esta apagada por defecto</h2>
-     * Si el programa no tiene un servidor NT4 escuchando, el cliente no conecta y no se publica
-     * <b>nada</b>. Publicar con timestamps pobres es un fallo degradado; no publicar es un fallo
-     * total. En modo local todo lo demas --- pose, tracking, bateria, comandos --- funciona igual.
+     * <h2>Why it is off by default</h2>
+     * If the program has no NT4 server listening, the client does not connect and <b>nothing</b> gets
+     * published. Publishing with poor timestamps is a degraded failure; not publishing is a total one.
+     * In local mode everything else --- pose, tracking, battery, commands --- works the same.
      *
-     * <p>Enciendela si tu robot code fusiona por {@code dataTimestamp()}, que es el caso normal de
-     * un pose estimator.
+     * <p>Switch it on if your robot code fuses on {@code dataTimestamp()}, which is the normal case
+     * for a pose estimator.
      *
-     * @param enabled true para publicar como cliente de red.
-     * @return esta misma configuracion.
+     * @param enabled true to publish as a network client.
+     * @return this same configuration.
      */
     public QuestNavSimConfig withNetworkClient(boolean enabled) {
         this.networkClient = enabled;
@@ -233,11 +235,10 @@ public class QuestNavSimConfig {
     }
 
     /**
-     * Nombre con el que se identifica el cliente NT4, si {@link #withNetworkClient(boolean)} esta
-     * encendido.
+     * The name the NT4 client identifies itself with, if {@link #withNetworkClient(boolean)} is on.
      *
-     * @param name nombre del cliente.
-     * @return esta misma configuracion.
+     * @param name client name.
+     * @return this same configuration.
      */
     public QuestNavSimConfig withClientName(String name) {
         this.clientName = name;
@@ -245,11 +246,11 @@ public class QuestNavSimConfig {
     }
 
     /**
-     * Direccion del servidor NT4 al que conectarse. Por defecto la loopback, que es donde escucha el
-     * robot cuando corres {@code simulateJava}.
+     * Address of the NT4 server to connect to. Loopback by default, which is where the robot listens
+     * when you run {@code simulateJava}.
      *
-     * @param address direccion del servidor.
-     * @return esta misma configuracion.
+     * @param address server address.
+     * @return this same configuration.
      */
     public QuestNavSimConfig withServerAddress(String address) {
         this.serverAddress = address;
@@ -257,14 +258,14 @@ public class QuestNavSimConfig {
     }
 
     /**
-     * Arranca con el origen del Quest desplazado al azar en vez de coincidiendo con el del campo.
+     * Starts with the Quest's origin randomly displaced instead of coinciding with the field's.
      *
-     * <p>Merece la pena encenderlo al menos una vez: con el origen en identidad, un equipo que nunca
-     * llama a {@code setPose()} ve poses de campo correctas por accidente, y el bug no aparece hasta
-     * que enciende el headset de verdad.
+     * <p>It is worth switching on at least once: with the origin at identity, a team that never calls
+     * {@code setPose()} sees correct field poses by accident, and the bug does not show up until they
+     * switch the real headset on.
      *
-     * @param enabled true para aleatorizarlo.
-     * @return esta misma configuracion.
+     * @param enabled true to randomise it.
+     * @return this same configuration.
      */
     public QuestNavSimConfig withRandomizedOrigin(boolean enabled) {
         this.randomizedOrigin = enabled;
@@ -272,11 +273,11 @@ public class QuestNavSimConfig {
     }
 
     /**
-     * Magnitud del origen aleatorio.
+     * Magnitude of the random origin.
      *
-     * @param translationMeters desplazamiento maximo en metros.
-     * @param rotationDegrees   desviacion maxima de yaw en grados.
-     * @return esta misma configuracion.
+     * @param translationMeters maximum displacement in metres.
+     * @param rotationDegrees   maximum yaw deviation in degrees.
+     * @return this same configuration.
      */
     public QuestNavSimConfig withRandomOriginRange(
             double translationMeters, double rotationDegrees) {
@@ -286,10 +287,10 @@ public class QuestNavSimConfig {
     }
 
     /**
-     * Deriva de posicion por metro recorrido, como fraccion. 0.003 es 0.3 %.
+     * Position drift per metre travelled, as a fraction. 0.003 is 0.3 %.
      *
-     * @param fraction fraccion de deriva por metro.
-     * @return esta misma configuracion.
+     * @param fraction drift fraction per metre.
+     * @return this same configuration.
      */
     public QuestNavSimConfig withDriftPerMeter(double fraction) {
         this.driftPerMeter = fraction;
@@ -297,10 +298,10 @@ public class QuestNavSimConfig {
     }
 
     /**
-     * Deriva de rumbo por vuelta completa del robot, en grados.
+     * Heading drift per full turn of the robot, in degrees.
      *
-     * @param degrees grados de deriva por vuelta.
-     * @return esta misma configuracion.
+     * @param degrees degrees of drift per turn.
+     * @return this same configuration.
      */
     public QuestNavSimConfig withDriftDegreesPerTurn(double degrees) {
         this.driftDegreesPerTurn = degrees;
@@ -308,11 +309,11 @@ public class QuestNavSimConfig {
     }
 
     /**
-     * Cuanto deriva el eje Z respecto a los horizontales. Un robot en el suelo casi no deriva en
-     * altura, de ahi que el factor por defecto sea menor que 1.
+     * How much the Z axis drifts relative to the horizontal ones. A robot on the floor barely
+     * drifts in height, hence the default factor below 1.
      *
-     * @param factor factor multiplicativo.
-     * @return esta misma configuracion.
+     * @param factor multiplicative factor.
+     * @return this same configuration.
      */
     public QuestNavSimConfig withVerticalDriftFactor(double factor) {
         this.verticalDriftFactor = factor;
@@ -320,11 +321,11 @@ public class QuestNavSimConfig {
     }
 
     /**
-     * Ruido blanco por frame, encima de la deriva acumulada.
+     * Per-frame white noise, on top of the accumulated drift.
      *
-     * @param meters  desviacion tipica en metros.
-     * @param degrees desviacion tipica de yaw en grados.
-     * @return esta misma configuracion.
+     * @param meters  standard deviation in metres.
+     * @param degrees yaw standard deviation in degrees.
+     * @return this same configuration.
      */
     public QuestNavSimConfig withFrameNoise(double meters, double degrees) {
         this.frameNoiseMeters = meters;
@@ -333,11 +334,11 @@ public class QuestNavSimConfig {
     }
 
     /**
-     * Cuanto se desplaza la pose al recuperar el tracking. La documentacion de QuestNav avisa de que
-     * el headset puede re-adquirir "con un offset", y ese salto es el fallo que mas dano hace.
+     * How far the pose shifts when tracking recovers. QuestNav's documentation warns that the
+     * headset may re-acquire "with an offset", and that jump is the most damaging failure there is.
      *
-     * @param meters magnitud del salto en metros.
-     * @return esta misma configuracion.
+     * @param meters magnitude of the jump in metres.
+     * @return this same configuration.
      */
     public QuestNavSimConfig withReacquireOffsetMeters(double meters) {
         this.reacquireOffsetMeters = meters;
@@ -345,10 +346,10 @@ public class QuestNavSimConfig {
     }
 
     /**
-     * Cuanto dura una perdida de tracking.
+     * How long a tracking loss lasts.
      *
-     * @param seconds duracion en segundos.
-     * @return esta misma configuracion.
+     * @param seconds duration in seconds.
+     * @return this same configuration.
      */
     public QuestNavSimConfig withTrackingLossSeconds(double seconds) {
         this.trackingLossSeconds = seconds;
@@ -356,10 +357,10 @@ public class QuestNavSimConfig {
     }
 
     /**
-     * Controla si un golpe fuerte tira el tracking solo.
+     * Controls whether a hard knock drops tracking on its own.
      *
-     * @param enabled true para activarlo.
-     * @return esta misma configuracion.
+     * @param enabled true to enable it.
+     * @return this same configuration.
      */
     public QuestNavSimConfig withImpactTrackingLoss(boolean enabled) {
         this.impactTrackingLoss = enabled;
@@ -367,11 +368,11 @@ public class QuestNavSimConfig {
     }
 
     /**
-     * Umbrales a partir de los cuales un golpe tira el tracking.
+     * Thresholds above which a knock drops tracking.
      *
-     * @param metersPerSecondSquared  aceleracion lineal.
-     * @param degreesPerSecondSquared aceleracion angular.
-     * @return esta misma configuracion.
+     * @param metersPerSecondSquared  linear acceleration.
+     * @param degreesPerSecondSquared angular acceleration.
+     * @return this same configuration.
      */
     public QuestNavSimConfig withImpactThresholds(
             double metersPerSecondSquared, double degreesPerSecondSquared) {
@@ -382,10 +383,10 @@ public class QuestNavSimConfig {
 
 
     /**
-     * Carga de bateria al arrancar.
+     * Battery charge at startup.
      *
-     * @param percent porcentaje de 0 a 100.
-     * @return esta misma configuracion.
+     * @param percent percentage from 0 to 100.
+     * @return this same configuration.
      */
     public QuestNavSimConfig withInitialBatteryPercent(double percent) {
         this.initialBatteryPercent = percent;
@@ -393,154 +394,154 @@ public class QuestNavSimConfig {
     }
 
     /**
-     * Descarga de bateria por minuto. Al llegar a cero el headset se apaga y deja de publicar,
-     * igual que el real.
+     * Battery drain per minute. On reaching zero the headset shuts off and stops publishing, just
+     * like the real one.
      *
-     * @param percentPerMinute puntos porcentuales por minuto.
-     * @return esta misma configuracion.
+     * @param percentPerMinute percentage points per minute.
+     * @return this same configuration.
      */
     public QuestNavSimConfig withBatteryDrainPercentPerMinute(double percentPerMinute) {
         this.batteryDrainPercentPerMinute = percentPerMinute;
         return this;
     }
 
-    /** @return el nombre de la tabla NT. */
+    /** @return the NT table name. */
     public String tableName() {
         return tableName;
     }
 
-    /** @return la version que se publica. */
+    /** @return the published version. */
     public String version() {
         return version;
     }
 
-    /** @return la semilla del generador de ruido. */
+    /** @return the noise generator's seed. */
     public long randomSeed() {
         return randomSeed;
     }
 
-    /** @return true si hay que registrar el SimDevice. */
+    /** @return true if the SimDevice should be registered. */
     public boolean createSimDevice() {
         return createSimDevice;
     }
 
-    /** @return true si hay que publicar telemetria. */
+    /** @return true if telemetry should be published. */
     public boolean publishTelemetry() {
         return publishTelemetry;
     }
 
-    /** @return true si el visor MJPEG esta encendido. */
+    /** @return true if the MJPEG viewfinder is on. */
     public boolean viewfinder() {
         return viewfinder;
     }
 
-    /** @return el nombre del mundo simulado del visor. */
+    /** @return the name of the viewfinder's simulated world. */
     public String visionWorldName() {
         return visionWorldName;
     }
 
-    /** @return el layout de AprilTags que dibuja el visor. */
+    /** @return the AprilTag layout the viewfinder draws. */
     public AprilTagFieldLayout fieldLayout() {
         return fieldLayout;
     }
 
-    /** @return la frecuencia de publicacion de frames. */
+    /** @return the frame publication rate. */
     public double frameRateHz() {
         return frameRateHz;
     }
 
-    /** @return la frecuencia de publicacion de deviceData. */
+    /** @return the deviceData publication rate. */
     public double deviceDataRateHz() {
         return deviceDataRateHz;
     }
 
-    /** @return true si hay que publicar desde una instancia cliente de NetworkTables. */
+    /** @return true if publication should happen from a NetworkTables client instance. */
     public boolean networkClient() {
         return networkClient;
     }
 
-    /** @return el nombre del cliente NT4. */
+    /** @return the NT4 client name. */
     public String clientName() {
         return clientName;
     }
 
-    /** @return la direccion del servidor NT4. */
+    /** @return the NT4 server address. */
     public String serverAddress() {
         return serverAddress;
     }
 
-    /** @return true si el origen del Quest arranca desplazado al azar. */
+    /** @return true if the Quest's origin starts randomly displaced. */
     public boolean randomizedOrigin() {
         return randomizedOrigin;
     }
 
-    /** @return desplazamiento maximo del origen aleatorio, en metros. */
+    /** @return maximum displacement of the random origin, in metres. */
     public double randomOriginTranslationMeters() {
         return randomOriginTranslationMeters;
     }
 
-    /** @return desviacion maxima de yaw del origen aleatorio, en grados. */
+    /** @return maximum yaw deviation of the random origin, in degrees. */
     public double randomOriginRotationDegrees() {
         return randomOriginRotationDegrees;
     }
 
-    /** @return la deriva por metro, como fraccion. */
+    /** @return the drift per metre, as a fraction. */
     public double driftPerMeter() {
         return driftPerMeter;
     }
 
-    /** @return la deriva de rumbo por vuelta, en grados. */
+    /** @return the heading drift per turn, in degrees. */
     public double driftDegreesPerTurn() {
         return driftDegreesPerTurn;
     }
 
-    /** @return el factor de deriva vertical. */
+    /** @return the vertical drift factor. */
     public double verticalDriftFactor() {
         return verticalDriftFactor;
     }
 
-    /** @return el ruido por frame en metros. */
+    /** @return the per-frame noise in metres. */
     public double frameNoiseMeters() {
         return frameNoiseMeters;
     }
 
-    /** @return el ruido de yaw por frame en grados. */
+    /** @return the per-frame yaw noise in degrees. */
     public double frameNoiseDegrees() {
         return frameNoiseDegrees;
     }
 
-    /** @return el salto de pose al re-adquirir, en metros. */
+    /** @return the pose jump on re-acquisition, in metres. */
     public double reacquireOffsetMeters() {
         return reacquireOffsetMeters;
     }
 
-    /** @return la duracion de una perdida de tracking, en segundos. */
+    /** @return the duration of a tracking loss, in seconds. */
     public double trackingLossSeconds() {
         return trackingLossSeconds;
     }
 
-    /** @return true si los golpes tiran el tracking. */
+    /** @return true if knocks drop tracking. */
     public boolean impactTrackingLoss() {
         return impactTrackingLoss;
     }
 
-    /** @return el umbral de aceleracion lineal para detectar un golpe. */
+    /** @return the linear acceleration threshold for detecting a knock. */
     public double impactAccelThreshold() {
         return impactAccelThreshold;
     }
 
-    /** @return el umbral de aceleracion angular para detectar un golpe. */
+    /** @return the angular acceleration threshold for detecting a knock. */
     public double impactAngularAccelThreshold() {
         return impactAngularAccelThreshold;
     }
 
 
-    /** @return la carga de bateria inicial. */
+    /** @return the initial battery charge. */
     public double initialBatteryPercent() {
         return initialBatteryPercent;
     }
 
-    /** @return la descarga de bateria por minuto. */
+    /** @return the battery drain per minute. */
     public double batteryDrainPercentPerMinute() {
         return batteryDrainPercentPerMinute;
     }

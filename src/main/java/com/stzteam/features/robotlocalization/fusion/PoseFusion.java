@@ -22,13 +22,13 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 
 /**
- * El portero que decide que mediciones de vision llegan al pose estimator.
+ * The gatekeeper that decides which vision measurements reach the pose estimator.
  *
- * <p>No es un estimador ni un filtro de Kalman: esos ya los trae WPILib. Lo que falta, y lo que hace
- * esta clase, es todo lo de antes --- registrar varias fuentes, descartar las que mienten, y
- * entregar solo lo que queda.
+ * <p>It is not an estimator or a Kalman filter: WPILib already ships those. What is missing, and
+ * what this class does, is everything that comes before --- registering several sources, discarding
+ * the ones that lie, and handing over only what is left.
  *
- * <h2>Uso</h2>
+ * <h2>Usage</h2>
  * <pre>{@code
  * private final PoseFusion fusion = new PoseFusion(
  *         poseEstimator::addVisionMeasurement,
@@ -42,35 +42,35 @@ import java.util.OptionalDouble;
  * }
  * }</pre>
  *
- * <h2>El orden importa</h2>
- * Los filtros van de barato a caro y de local a global. Primero lo que se decide sin leer hardware
- * --- esta encendida, el robot no esta girando como una peonza ---, luego la medicion en si, y al
- * final lo que necesita ver a todas las fuentes juntas: consenso y Mahalanobis. Una fuente
- * descartada por entorno ni siquiera gasta la lectura.
+ * <h2>Order matters</h2>
+ * The filters run from cheap to expensive and from local to global. First what can be decided
+ * without reading hardware --- is it enabled, is the robot not spinning like a top ---, then the
+ * measurement itself, and last what needs to see every source at once: consensus and Mahalanobis. A
+ * source discarded on environment does not even spend the read.
  *
- * <p>Cada fuente publica en NetworkTables por que se descarto su ultima medicion. Ver
- * {@link RejectionReason}: sin eso, un filtro mal calibrado y una camara rota se ven igual.
+ * <p>Every source publishes to NetworkTables why its last measurement was discarded. See
+ * {@link RejectionReason}: without it, a badly calibrated filter and a broken camera look the same.
  */
 public class PoseFusion {
 
     /**
-     * Donde acaban las mediciones que sobreviven. La firma es la de
-     * {@code SwerveDrivePoseEstimator.addVisionMeasurement}, asi que se pasa como referencia a
-     * metodo y sin envolver el timestamp en un {@code Double}.
+     * Where the surviving measurements end up. The signature is that of
+     * {@code SwerveDrivePoseEstimator.addVisionMeasurement}, so it can be passed as a method
+     * reference and without boxing the timestamp into a {@code Double}.
      */
     @FunctionalInterface
     public interface VisionMeasurementConsumer {
         /**
-         * Entrega una medicion al estimator.
+         * Hands a measurement to the estimator.
          *
-         * @param pose             pose medida.
-         * @param timestampSeconds instante de la captura.
-         * @param stdDevs          confianza en la medicion.
+         * @param pose             the measured pose.
+         * @param timestampSeconds the instant of capture.
+         * @param stdDevs          confidence in the measurement.
          */
         void accept(Pose2d pose, double timestampSeconds, Matrix<N3, N1> stdDevs);
     }
 
-    /** Cada cuanto se repite un aviso de desacuerdo, en segundos. */
+    /** How often a disagreement warning repeats, in seconds. */
     private static final double WARNING_PERIOD_SECONDS = 2.0;
 
     private static AprilTagFieldLayout defaultFieldLayout = FieldLayouts.defaultField();
@@ -87,11 +87,11 @@ public class PoseFusion {
     private int acceptedThisCycle = 0;
 
     /**
-     * Crea la fusion.
+     * Creates the fusion.
      *
-     * @param consumer donde entregar las mediciones aceptadas, normalmente
+     * @param consumer where to hand the accepted measurements, usually
      *                 {@code poseEstimator::addVisionMeasurement}.
-     * @param inputs   estado del robot que comparten las fuentes.
+     * @param inputs   the robot state the sources share.
      */
     public PoseFusion(VisionMeasurementConsumer consumer, LocalizationInputs inputs) {
         this.consumer = consumer;
@@ -99,51 +99,52 @@ public class PoseFusion {
     }
 
     /**
-     * Cambia el layout que usan {@link #isInField(Pose2d)} y las fuentes que no traigan el suyo.
+     * Changes the layout used by {@link #isInField(Pose2d)} and by any source that does not bring
+     * its own.
      *
-     * @param layout layout del campo.
+     * @param layout the field layout.
      */
     public static void setDefaultFieldLayout(AprilTagFieldLayout layout) {
         defaultFieldLayout = layout;
     }
 
-    /** @return el layout por defecto de la feature. */
+    /** @return the feature's default layout. */
     public static AprilTagFieldLayout defaultFieldLayout() {
         return defaultFieldLayout;
     }
 
     /**
-     * Comprueba que una pose caiga dentro del campo, con el layout por defecto.
+     * Checks that a pose falls inside the field, using the default layout.
      *
-     * @param pose pose a comprobar.
-     * @return true si esta dentro.
+     * @param pose pose to check.
+     * @return true if it is inside.
      */
     public static boolean isInField(Pose2d pose) {
         return isInField(pose, defaultFieldLayout, 0.0);
     }
 
     /**
-     * Comprueba que una pose caiga dentro del campo, con un margen.
+     * Checks that a pose falls inside the field, with a margin.
      *
-     * <p>Un margen pequeno --- del orden de medio metro --- evita descartar mediciones buenas de un
-     * robot pegado a la pared, donde el centro del chasis puede quedar fuera del rectangulo por la
-     * propia incertidumbre.
+     * <p>A small margin --- on the order of half a metre --- avoids discarding good measurements
+     * from a robot up against the wall, where the chassis centre can land outside the rectangle from
+     * the uncertainty alone.
      *
-     * @param pose          pose a comprobar.
-     * @param marginMeters  margen alrededor del campo.
-     * @return true si esta dentro.
+     * @param pose          pose to check.
+     * @param marginMeters  margin around the field.
+     * @return true if it is inside.
      */
     public static boolean isInField(Pose2d pose, double marginMeters) {
         return isInField(pose, defaultFieldLayout, marginMeters);
     }
 
     /**
-     * Comprueba que una pose caiga dentro del campo de un layout concreto.
+     * Checks that a pose falls inside the field of a specific layout.
      *
-     * @param pose         pose a comprobar.
-     * @param layout       layout del campo.
-     * @param marginMeters margen alrededor del campo.
-     * @return true si esta dentro.
+     * @param pose         pose to check.
+     * @param layout       the field layout.
+     * @param marginMeters margin around the field.
+     * @return true if it is inside.
      */
     public static boolean isInField(Pose2d pose, AprilTagFieldLayout layout, double marginMeters) {
         double x = pose.getX();
@@ -155,10 +156,10 @@ public class PoseFusion {
     }
 
     /**
-     * Registra una fuente. Se le inyectan las entradas y la tabla de telemetria.
+     * Registers a source. The inputs and the telemetry table are injected into it.
      *
-     * @param source fuente a registrar.
-     * @return esta misma fusion, para encadenar.
+     * @param source source to register.
+     * @return this same fusion, for chaining.
      */
     public PoseFusion registerSource(PoseSource source) {
         source.bindInputs(inputs);
@@ -168,59 +169,59 @@ public class PoseFusion {
     }
 
     /**
-     * Busca una fuente por nombre.
+     * Looks a source up by name.
      *
-     * @param name nombre de la fuente.
-     * @return la fuente, o vacio.
+     * @param name source name.
+     * @return the source, or empty.
      */
     public Optional<PoseSource> getSource(String name) {
         return Optional.ofNullable(sources.get(name));
     }
 
     /**
-     * Busca una fuente por nombre y tipo.
+     * Looks a source up by name and type.
      *
-     * @param <T>  tipo concreto esperado.
-     * @param name nombre de la fuente.
-     * @param type clase esperada.
-     * @return la fuente, o vacio si no existe o si es de otro tipo.
+     * @param <T>  the concrete type expected.
+     * @param name source name.
+     * @param type the expected class.
+     * @return the source, or empty if it does not exist or is of another type.
      */
     public <T extends PoseSource> Optional<T> getSource(String name, Class<T> type) {
         PoseSource source = sources.get(name);
         return type.isInstance(source) ? Optional.of(type.cast(source)) : Optional.empty();
     }
 
-    /** @return todas las fuentes registradas, en orden de registro. */
+    /** @return every registered source, in registration order. */
     public Collection<PoseSource> getSources() {
         return sources.values();
     }
 
-    /** @return la puerta de consenso, para configurarla. */
+    /** @return the consensus gate, so it can be configured. */
     public ConsensusGate consensus() {
         return consensusGate;
     }
 
     /**
-     * Enciende o apaga el arbitraje entre fuentes.
+     * Enables or disables arbitration between sources.
      *
-     * @param enabled true para arbitrar.
-     * @return esta misma fusion.
+     * @param enabled true to arbitrate.
+     * @return this same fusion.
      */
     public PoseFusion setConsensusEnabled(boolean enabled) {
         this.consensusEnabled = enabled;
         return this;
     }
 
-    /** @return true si el arbitraje esta activo. */
+    /** @return true if arbitration is active. */
     public boolean isConsensusEnabled() {
         return consensusEnabled;
     }
 
     /**
-     * Tabla de NetworkTables para la telemetria. Cambiala antes de registrar las fuentes.
+     * NetworkTables table for the telemetry. Change it before registering the sources.
      *
-     * @param table nombre de la tabla.
-     * @return esta misma fusion.
+     * @param table table name.
+     * @return this same fusion.
      */
     public PoseFusion setTelemetryTable(String table) {
         this.telemetryTable = table;
@@ -228,16 +229,16 @@ public class PoseFusion {
         return this;
     }
 
-    /** @return cuantas mediciones se aceptaron en el ultimo {@link #update()}. */
+    /** @return how many measurements were accepted in the last {@link #update()}. */
     public int getAcceptedCount() {
         return acceptedThisCycle;
     }
 
     /**
-     * Un ciclo completo. Llamalo desde {@code periodic()}.
+     * One full cycle. Call it from {@code periodic()}.
      *
-     * <p>Es seguro llamarlo aunque no haya ninguna fuente registrada o aunque todas esten apagadas:
-     * en ese caso no hace nada mas que publicar telemetria.
+     * <p>It is safe to call even with no source registered or with all of them disabled: in that
+     * case it does nothing beyond publishing telemetry.
      */
     public void update() {
         acceptedThisCycle = 0;
@@ -257,10 +258,10 @@ public class PoseFusion {
             try {
                 measurement = source.getMeasurement();
             } catch (RuntimeException e) {
-                // Una fuente rota no puede tumbar a las demas: el robot sigue necesitando
-                // localizarse con lo que quede.
+                // A broken source cannot take the others down with it: the robot still needs to
+                // localise with whatever is left.
                 source.markRejected(RejectionReason.SOURCE_ERROR);
-                warn("La fuente '" + source.getName() + "' fallo: " + e);
+                warn("Source '" + source.getName() + "' failed: " + e);
                 continue;
             }
 
@@ -324,16 +325,16 @@ public class PoseFusion {
                 consensusGate.evaluate(candidates, speed.orElse(0.0));
 
         for (String conflict : result.conflicts()) {
-            warn("Consenso: " + conflict);
+            warn("Consensus: " + conflict);
         }
         return result;
     }
 
     /**
-     * Avisa por consola con un limite de tasa.
+     * Warns on the console with a rate limit.
      *
-     * <p>Un desacuerdo sostenido se repite en cada ciclo, y a 50 Hz eso llena el log de la Driver
-     * Station lo bastante rapido como para tapar el resto de los mensajes.
+     * <p>A sustained disagreement repeats every cycle, and at 50 Hz that fills the Driver Station
+     * log fast enough to bury every other message.
      */
     private void warn(String message) {
         double now = Timer.getFPGATimestamp();

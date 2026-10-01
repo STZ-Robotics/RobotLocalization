@@ -10,9 +10,9 @@ import edu.wpi.first.units.measure.LinearAcceleration;
 import edu.wpi.first.units.measure.LinearVelocity;
 
 /**
- * Umbrales de los filtros de una {@link PoseSource}.
+ * Filter thresholds for a {@link PoseSource}.
  *
- * <p>Setters fluidos, igual que el resto de configuraciones de la feature:
+ * <p>Fluent setters, like the rest of the feature's configuration objects:
  *
  * <pre>{@code
  * var config = PoseSourceConfig.forAprilTags()
@@ -20,10 +20,10 @@ import edu.wpi.first.units.measure.LinearVelocity;
  *         .withMaxAmbiguity(0.25);
  * }</pre>
  *
- * <h2>Como se apaga un filtro</h2>
- * Todo umbral arranca en infinito, que es la forma de decir "sin limite": la comparacion
- * {@code valor <= INFINITY} siempre pasa, asi que un filtro sin configurar no filtra nada. No hay
- * banderas de activacion ni valores centinela que memorizar.
+ * <h2>How a filter is switched off</h2>
+ * Every threshold starts at infinity, which is the way of saying "no limit": the comparison
+ * {@code value <= INFINITY} always passes, so an unconfigured filter filters nothing. There are no
+ * enable flags or sentinel values to memorise.
  */
 public class PoseSourceConfig {
 
@@ -37,18 +37,17 @@ public class PoseSourceConfig {
     private double mahalanobisBaseStdDevRadians = 0.05;
     private double mahalanobisDriftVariancePerSecond = 0.0;
 
-    /** Crea una configuracion sin ningun filtro activo. */
+    /** Creates a configuration with no filter active. */
     public PoseSourceConfig() {}
 
     /**
-     * Preset razonable para una camara que mira AprilTags.
+     * A sensible preset for a camera looking at AprilTags.
      *
-     * <p>Los numeros son puntos de partida defendibles, no verdades: 720 grados por segundo es
-     * aproximadamente donde el desenfoque de movimiento empieza a arruinar el PnP en una camara de
-     * obturador global, y 0.3 de ambiguedad es el umbral que recomienda PhotonVision. Ajustalos
-     * contra tus propios datos.
+     * <p>The numbers are defensible starting points, not truths: 720 degrees per second is roughly
+     * where motion blur starts to ruin PnP on a global-shutter camera, and an ambiguity of 0.3 is
+     * the threshold PhotonVision recommends. Tune them against your own data.
      *
-     * @return una configuracion nueva.
+     * @return a new configuration.
      */
     public static PoseSourceConfig forAprilTags() {
         return new PoseSourceConfig()
@@ -58,24 +57,24 @@ public class PoseSourceConfig {
     }
 
     /**
-     * Preset razonable para una fuente de odometria visual-inercial tipo QuestNav.
+     * A sensible preset for a visual-inertial odometry source such as QuestNav.
      *
-     * <p>Sin limite de velocidad angular: un VIO no hace PnP, asi que girar no le afecta como a una
-     * camara. Sin ambiguedad porque no reporta ninguna. El gate de Mahalanobis va mas apretado
-     * porque un VIO no deberia dar saltos, y cuando los da --- re-adquisicion tras perder el
-     * tracking --- es justo lo que hay que atrapar.
+     * <p>No angular velocity limit: a VIO does not do PnP, so turning does not affect it the way it
+     * affects a camera. No ambiguity, because it reports none. The Mahalanobis gate is tighter
+     * because a VIO should not jump, and when it does --- re-acquisition after losing tracking ---
+     * that is exactly what needs catching.
      *
-     * @return una configuracion nueva.
+     * @return a new configuration.
      */
     public static PoseSourceConfig forVisualInertialOdometry() {
         return new PoseSourceConfig().withMahalanobisGate(3.0, 0.02, 0.02, 0.05);
     }
 
     /**
-     * Velocidad angular por encima de la cual se descartan las mediciones.
+     * Angular velocity above which measurements are discarded.
      *
-     * @param limit velocidad angular maxima.
-     * @return esta misma configuracion.
+     * @param limit maximum angular velocity.
+     * @return this same configuration.
      */
     public PoseSourceConfig withMaxAngularVelocity(AngularVelocity limit) {
         this.maxAngularVelocityDegPerSec =
@@ -84,10 +83,10 @@ public class PoseSourceConfig {
     }
 
     /**
-     * Velocidad lineal por encima de la cual se descartan las mediciones.
+     * Linear velocity above which measurements are discarded.
      *
-     * @param limit velocidad lineal maxima.
-     * @return esta misma configuracion.
+     * @param limit maximum linear velocity.
+     * @return this same configuration.
      */
     public PoseSourceConfig withMaxPlanarVelocity(LinearVelocity limit) {
         this.maxPlanarVelocityMps =
@@ -96,11 +95,11 @@ public class PoseSourceConfig {
     }
 
     /**
-     * Aceleracion por encima de la cual se descartan las mediciones. Sirve sobre todo para ignorar
-     * el instante de un choque, cuando la camara se mueve mas rapido de lo que su obturador aguanta.
+     * Acceleration above which measurements are discarded. This mostly serves to ignore the moment
+     * of a collision, when the camera moves faster than its shutter can take.
      *
-     * @param limit aceleracion maxima.
-     * @return esta misma configuracion.
+     * @param limit maximum acceleration.
+     * @return this same configuration.
      */
     public PoseSourceConfig withMaxAcceleration(LinearAcceleration limit) {
         this.maxAccelerationGs = limit == null ? Double.POSITIVE_INFINITY : Math.abs(limit.in(Gs));
@@ -108,11 +107,11 @@ public class PoseSourceConfig {
     }
 
     /**
-     * Ambiguedad de PnP por encima de la cual se descarta la medicion. Solo aplica a las fuentes que
-     * reportan ambiguedad; las que no, se saltan el filtro.
+     * PnP ambiguity above which the measurement is discarded. It only applies to sources that
+     * report ambiguity; the ones that do not skip the filter.
      *
-     * @param limit ambiguedad maxima, de 0 a 1.
-     * @return esta misma configuracion.
+     * @param limit maximum ambiguity, from 0 to 1.
+     * @return this same configuration.
      */
     public PoseSourceConfig withMaxAmbiguity(double limit) {
         this.maxAmbiguity = limit;
@@ -120,19 +119,20 @@ public class PoseSourceConfig {
     }
 
     /**
-     * Configura el filtro de Mahalanobis, que descarta las mediciones demasiado lejos de lo que el
-     * estimator ya cree.
+     * Configures the Mahalanobis filter, which discards measurements too far from what the
+     * estimator already believes.
      *
-     * <p>La incertidumbre con la que se compara <b>crece con el tiempo</b> desde la ultima medicion
-     * aceptada. Eso es lo que hace al filtro util y no un candado: si una fuente lleva diez segundos
-     * sin aportar nada, el estimator pudo haberse ido de sitio, y el filtro se abre para dejar que
-     * lo corrija.
+     * <p>The uncertainty it compares against <b>grows with time</b> since the last accepted
+     * measurement. That is what makes the filter useful rather than a padlock: if a source has
+     * contributed nothing for ten seconds, the estimator may have wandered off, and the filter opens
+     * up to let it be corrected.
      *
-     * @param sigmas                distancia maxima en sigmas. 3 es apretado, 5 es permisivo.
-     * @param baseStdDevMeters      incertidumbre de posicion del estimator recien corregido.
-     * @param baseStdDevRadians     incertidumbre de rumbo del estimator recien corregido.
-     * @param driftVariancePerSecond cuanta varianza suma la odometria por segundo sin correccion.
-     * @return esta misma configuracion.
+     * @param sigmas                maximum distance in sigmas. 3 is tight, 5 is permissive.
+     * @param baseStdDevMeters      position uncertainty of a freshly corrected estimator.
+     * @param baseStdDevRadians     heading uncertainty of a freshly corrected estimator.
+     * @param driftVariancePerSecond how much variance the odometry adds per second without a
+     *                               correction.
+     * @return this same configuration.
      */
     public PoseSourceConfig withMahalanobisGate(
             double sigmas,
@@ -146,47 +146,47 @@ public class PoseSourceConfig {
         return this;
     }
 
-    /** @return velocidad angular maxima en grados por segundo. */
+    /** @return maximum angular velocity in degrees per second. */
     public double maxAngularVelocityDegPerSec() {
         return maxAngularVelocityDegPerSec;
     }
 
-    /** @return velocidad lineal maxima en metros por segundo. */
+    /** @return maximum linear velocity in metres per second. */
     public double maxPlanarVelocityMps() {
         return maxPlanarVelocityMps;
     }
 
-    /** @return aceleracion maxima en G. */
+    /** @return maximum acceleration in G. */
     public double maxAccelerationGs() {
         return maxAccelerationGs;
     }
 
-    /** @return ambiguedad maxima. */
+    /** @return maximum ambiguity. */
     public double maxAmbiguity() {
         return maxAmbiguity;
     }
 
-    /** @return distancia de Mahalanobis maxima, en sigmas. */
+    /** @return maximum Mahalanobis distance, in sigmas. */
     public double maxMahalanobisSigmas() {
         return maxMahalanobisSigmas;
     }
 
-    /** @return true si el filtro de Mahalanobis esta activo. */
+    /** @return true if the Mahalanobis filter is active. */
     public boolean mahalanobisEnabled() {
         return Double.isFinite(maxMahalanobisSigmas);
     }
 
-    /** @return incertidumbre base de posicion del estimator, en metros. */
+    /** @return the estimator's base position uncertainty, in metres. */
     public double mahalanobisBaseStdDevMeters() {
         return mahalanobisBaseStdDevMeters;
     }
 
-    /** @return incertidumbre base de rumbo del estimator, en radianes. */
+    /** @return the estimator's base heading uncertainty, in radians. */
     public double mahalanobisBaseStdDevRadians() {
         return mahalanobisBaseStdDevRadians;
     }
 
-    /** @return varianza que suma la odometria por segundo sin correccion. */
+    /** @return the variance the odometry adds per second without a correction. */
     public double mahalanobisDriftVariancePerSecond() {
         return mahalanobisDriftVariancePerSecond;
     }

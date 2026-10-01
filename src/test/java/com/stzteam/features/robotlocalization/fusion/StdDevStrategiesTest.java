@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.function.BiFunction;
 
-/** Las estrategias de confianza. Matematica pura: ni HAL, ni NetworkTables, ni hardware. */
+/** The confidence strategies. Pure maths: no HAL, no NetworkTables, no hardware. */
 class StdDevStrategiesTest {
 
     private static final double EPS = 1e-9;
@@ -29,7 +29,7 @@ class StdDevStrategiesTest {
         double atTwoMeters = strategy.apply(2.0, 1).get(0, 0);
 
         assertEquals(0.1, atOneMeter, EPS);
-        assertEquals(4.0, atTwoMeters / atOneMeter, EPS, "el doble de lejos, cuatro veces peor");
+        assertEquals(4.0, atTwoMeters / atOneMeter, EPS, "twice as far, four times worse");
     }
 
     @Test
@@ -42,7 +42,7 @@ class StdDevStrategiesTest {
 
     @Test
     void quadraticSurvivesZeroTags() {
-        // Una division entre cero aqui envenena el estimator con NaN sin decir nada.
+        // A division by zero here poisons the estimator with NaN without saying a word.
         Matrix<N3, N1> result = StdDevStrategies.quadraticContinuous(0.1, 0.2).apply(2.0, 0);
 
         assertTrue(Double.isFinite(result.get(0, 0)));
@@ -50,15 +50,15 @@ class StdDevStrategiesTest {
 
     @Test
     void clampedBoundsXandYIndependently() {
-        // Acotar solo X y copiarlo en Y funciona mientras todas las estrategias devuelvan los dos
-        // iguales, y deja de funcionar en silencio en cuanto alguna no lo haga.
+        // Bounding only X and copying it into Y works as long as every strategy returns the two
+        // equal, and silently stops working the moment one does not.
         BiFunction<Double, Integer, Matrix<N3, N1>> asymmetric =
                 (distance, tags) -> VecBuilder.fill(0.1, 9.0, 0.5);
 
         Matrix<N3, N1> result = StdDevStrategies.clamped(asymmetric, 0.2, 4.0, 0.1, 1.0).apply(1.0, 1);
 
-        assertEquals(0.2, result.get(0, 0), EPS, "X deberia subir hasta el minimo");
-        assertEquals(4.0, result.get(1, 0), EPS, "Y deberia bajar hasta el maximo, no copiar a X");
+        assertEquals(0.2, result.get(0, 0), EPS, "X should rise to the minimum");
+        assertEquals(4.0, result.get(1, 0), EPS, "Y should drop to the maximum, not copy X");
         assertEquals(0.5, result.get(2, 0), EPS);
     }
 
@@ -84,9 +84,9 @@ class StdDevStrategiesTest {
                                 new StdDevStrategies.DistanceStep(2.0, 0.1, 0.2)),
                         List.of(new StdDevStrategies.TagStep(1, 1.0, 1.0)));
 
-        assertEquals(0.1, strategy.apply(1.0, 1).get(0, 0), EPS, "dentro del tramo cercano");
-        assertEquals(0.5, strategy.apply(3.0, 1).get(0, 0), EPS, "dentro del tramo lejano");
-        assertEquals(2.0, strategy.apply(9.0, 1).get(0, 0), EPS, "mas alla de todo, el fallback");
+        assertEquals(0.1, strategy.apply(1.0, 1).get(0, 0), EPS, "inside the near band");
+        assertEquals(0.5, strategy.apply(3.0, 1).get(0, 0), EPS, "inside the far band");
+        assertEquals(2.0, strategy.apply(9.0, 1).get(0, 0), EPS, "beyond everything, the fallback");
     }
 
     @Test
@@ -100,7 +100,7 @@ class StdDevStrategiesTest {
                                 new StdDevStrategies.TagStep(2, 0.5, 0.5)));
 
         assertEquals(1.0, strategy.apply(1.0, 1).get(0, 0), EPS);
-        assertEquals(0.5, strategy.apply(1.0, 3).get(0, 0), EPS, "3 tags cae en el tramo de 2+");
+        assertEquals(0.5, strategy.apply(1.0, 3).get(0, 0), EPS, "3 tags falls in the 2+ band");
     }
 
     @Test
@@ -116,8 +116,8 @@ class StdDevStrategiesTest {
                 StdDevStrategies.interpolatedEmpirical(
                         xy, theta, List.of(new StdDevStrategies.TagStep(1, 1.0, 1.0)));
 
-        assertEquals(0.3, strategy.apply(2.0, 1).get(0, 0), 1e-9, "a mitad de camino");
-        assertEquals(0.5, strategy.apply(9.0, 1).get(0, 0), 1e-9, "satura en el ultimo punto");
+        assertEquals(0.3, strategy.apply(2.0, 1).get(0, 0), 1e-9, "halfway along");
+        assertEquals(0.5, strategy.apply(9.0, 1).get(0, 0), 1e-9, "saturates at the last point");
     }
 
     @Test
@@ -141,10 +141,10 @@ class StdDevStrategiesTest {
 
         assertTrue(
                 turn.apply(1.0, 1).get(0, 0) > drive.apply(1.0, 1).get(0, 0),
-                "girar deforma la imagen mas que avanzar");
+                "spinning distorts the image more than driving");
         assertTrue(
                 turn.apply(1.0, 1).get(2, 0) > 0.2,
-                "y el rumbo es lo primero que se pierde");
+                "and the heading is the first thing to go");
     }
 
     @Test
@@ -155,7 +155,7 @@ class StdDevStrategiesTest {
         Matrix<N3, N1> result =
                 StdDevStrategies.dynamicStateDegradation(base, () -> absurd, 3.0, 2.0).apply(1.0, 1);
 
-        assertTrue(Double.isFinite(result.get(0, 0)), "la red de seguridad deberia sostenerlo");
+        assertTrue(Double.isFinite(result.get(0, 0)), "the safety net should hold it");
         assertTrue(Double.isFinite(result.get(2, 0)));
     }
 
@@ -174,14 +174,14 @@ class StdDevStrategiesTest {
         double[] clock = {100.0};
         var strategy = StdDevStrategies.vioTimeDrift(0.02, 0.01, 0.1, 0.01, () -> clock[0]);
 
-        assertEquals(0.02, strategy.apply(0.0, 1).get(0, 0), EPS, "recien creada no ha derivado");
+        assertEquals(0.02, strategy.apply(0.0, 1).get(0, 0), EPS, "freshly created it has not drifted");
 
         clock[0] = 110.0;
         assertEquals(1.02, strategy.apply(0.0, 1).get(0, 0), 1e-9, "10 s despues");
 
-        // Un POSE_RESET devuelve la deriva real a cero, y la estrategia tiene que enterarse. Sin
-        // esto sigue inflando para siempre y el estimator termina ignorando un sensor que ya esta
-        // perfecto.
+        // A POSE_RESET returns the real drift to zero, and the strategy has to hear about it. Without
+        // this it keeps inflating forever and the estimator ends up ignoring a sensor that is already
+        // perfect.
         strategy.reset();
         assertEquals(0.02, strategy.apply(0.0, 1).get(0, 0), EPS);
         assertEquals(0.0, strategy.elapsedSeconds(), EPS);
@@ -197,7 +197,7 @@ class StdDevStrategiesTest {
 
         assertTrue(
                 result.get(2, 0) < result.get(0, 0),
-                "el giroscopio del Quest deriva mucho menos que su posicion");
+                "the Quest's gyro drifts far less than its position");
     }
 
     @Test

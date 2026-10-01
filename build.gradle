@@ -17,8 +17,8 @@ java {
     targetCompatibility = JavaVersion.VERSION_17
 }
 
-// Los fuentes estan en UTF-8. Sin esto javac usa el codepage del sistema (windows-1252 aqui) y
-// cualquier simbolo fuera de ASCII en un javadoc sale mal.
+// The sources are UTF-8. Without this javac falls back to the platform codepage
+// (windows-1252 here) and any non-ASCII symbol in a javadoc comes out mangled.
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
@@ -60,7 +60,7 @@ def toGradleRange(String constraint) {
     } else if (constraint.startsWith("<")) {
         return "(,${constraint.substring(1).trim()})"
     }
-    // Sin operador: se asume versión exacta
+    // No operator: an exact version is assumed
     return constraint.trim()
 }
 
@@ -71,8 +71,8 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
-    // Nativas de escritorio (ntcore, wpimath, photontargeting...). Sin ellas los tests que
-    // tocan NetworkTables o la simulacion de vision mueren al cargar el JNI.
+    // Desktop natives (ntcore, wpimath, photontargeting...). Without them any test that
+    // touches NetworkTables or the vision simulation dies while loading the JNI.
     nativeRelease wpi.java.deps.wpilibJniRelease(wpi.platforms.desktop)
     nativeRelease "org.photonvision:photontargeting-cpp:${photonVersion}:${wpi.platforms.desktop}@zip"
 
@@ -83,30 +83,33 @@ dependencies {
     implementation "org.photonvision:photonlib-java:${photonVersion}"
     implementation "org.photonvision:photontargeting-java:${photonVersion}"
 
-    // QuestNav. Se usa para publicar los mismos mensajes protobuf que consume el robot code,
-    // compartiendo los adaptadores del vendor en vez de reimplementar la serializacion.
+    // QuestNav. Used to publish the same protobuf messages the robot code consumes, sharing
+    // the vendor adapters instead of reimplementing the serialization.
     implementation "gg.questnav:questnavlib-java:${questNavVersion}"
 }
 
 test {
     useJUnitPlatform()
 
-    // En Windows, las nativas de WPILib estan compiladas contra el runtime MSVC que trae el
-    // JDK de WPILib; con otro JDK la JVM de test revienta al cargar ntcore. Si el JDK de
-    // WPILib esta instalado lo usamos, y si no dejamos el de Gradle (en Linux y macOS no
-    // hace falta, que es el caso del CI).
+    // On Windows the WPILib natives are built against the MSVC runtime that ships with the
+    // WPILib JDK; on any other JDK the test JVM crashes while loading ntcore. Use the WPILib
+    // JDK when it is installed and fall back to Gradle's own otherwise (Linux and macOS do not
+    // need it, which is the CI case).
+    //
+    // Use `new File` rather than Gradle's `file()`: on Linux `file()` reads the leading "C:" of
+    // the Windows path as a URL scheme and fails the whole configuration phase.
     def wpilibJdk = [
         "C:/Users/Public/wpilib/2026/jdk/bin/java.exe",
         "${System.getProperty('user.home')}/wpilib/2026/jdk/bin/java.exe"
-    ].collect { file(it) }.find { it.exists() }
+    ].collect { new File(it.toString()) }.find { it.isFile() }
 
     if (wpilibJdk != null) {
         executable = wpilibJdk.absolutePath
     }
 }
 
-// Extrae las nativas de WPILib/PhotonVision al classpath de tests. Sin esto, cualquier
-// test que toque NetworkTables o geometria 3D mata la JVM de test al cargar el JNI.
+// Extracts the WPILib/PhotonVision natives onto the test classpath. Without this, any test
+// that touches NetworkTables or 3D geometry kills the test JVM while loading the JNI.
 wpi.java.configureTestTasks(test)
 
 publishing {

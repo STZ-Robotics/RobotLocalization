@@ -1,6 +1,6 @@
 {
   "author": "STZ-Robotics",
-  "description": "Localizacion para MARS: fusion de pose con filtros y consenso, mas Limelight y QuestNav simuladas con puente a NetworkTables y SimDevice",
+  "description": "Localization for MARS: pose fusion with filtering and consensus, plus simulated Limelight and QuestNav with a NetworkTables bridge and SimDevice",
   "featureId": "RobotLocalization",
   "forgeMiniRequired": ">=1.1.0",
   "groupId": "com.stzteam.features.robotlocalization",

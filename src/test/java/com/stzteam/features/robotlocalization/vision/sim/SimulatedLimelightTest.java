@@ -25,12 +25,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * Prueba de extremo a extremo: coloca el robot delante de un AprilTag real del campo, corre
- * unos ciclos de simulacion y comprueba que la tabla de NetworkTables queda como la dejaria
- * un Limelight fisico.
+ * An end-to-end test: it places the robot in front of a real field AprilTag, runs a few
+ * simulation cycles and checks that the NetworkTables table ends up the way a physical
+ * Limelight would leave it.
  *
- * <p>Es la version automatizada del checklist de validacion: si esto pasa, un subsistema
- * escrito contra {@code LimelightHelpers} funciona sin tocarlo.
+ * <p>It is the automated version of the validation checklist: if this passes, a subsystem
+ * written against {@code LimelightHelpers} works untouched.
  */
 class SimulatedLimelightTest {
 
@@ -47,9 +47,9 @@ class SimulatedLimelightTest {
 
     @BeforeEach
     void setUp() {
-        assertTrue(HAL.initialize(500, 0), "no se pudo inicializar el HAL");
-        // Los SimDevice se registran por nombre y HAL_CreateSimDevice devuelve null si ya
-        // existe uno igual, asi que hay que limpiar el registro entre casos.
+        assertTrue(HAL.initialize(500, 0), "could not initialise the HAL");
+        // SimDevices are registered by name and HAL_CreateSimDevice returns null if one of the same
+        // name already exists, so the registry has to be cleared between cases.
         SimDeviceSim.resetData();
         clearRobotInputs();
         SimHooks.pauseTiming();
@@ -67,9 +67,9 @@ class SimulatedLimelightTest {
     }
 
     /**
-     * Inclinacion que necesita la camara para apuntar al tag desde la distancia del test. Se
-     * calcula en vez de hardcodearse para que el test no se rompa cuando cambie el campo y
-     * los tags esten a otra altura.
+     * The tilt the camera needs to point at the tag from the test's distance. It is computed
+     * rather than hardcoded so the test does not break when the field changes and the tags sit
+     * at a different height.
      */
     private double pitchTowardsTag(int tagId) {
         double tagHeight = layout.getTagPose(tagId).orElseThrow().getZ();
@@ -90,18 +90,18 @@ class SimulatedLimelightTest {
 
         NetworkTable table = NetworkTableInstance.getDefault().getTable(CAMERA);
 
-        assertEquals(1.0, table.getEntry("tv").getDouble(-1.0), 1e-9, "deberia ver el tag");
+        assertEquals(1.0, table.getEntry("tv").getDouble(-1.0), 1e-9, "it should see the tag");
         assertEquals(TAG_ID, (int) table.getEntry("tid").getDouble(-1.0));
-        assertTrue(table.getEntry("tl").getDouble(0.0) > 0.0, "la latencia deberia ser real");
+        assertTrue(table.getEntry("tl").getDouble(0.0) > 0.0, "the latency should be real");
         assertTrue(
                 Math.abs(table.getEntry("tx").getDouble(99.0)) < 10.0,
-                "el tag esta casi centrado, tx deberia ser pequeno");
+                "the tag is nearly centred, so tx should be small");
 
         double[] botpose = table.getEntry("botpose_wpiblue").getDoubleArray(new double[0]);
         int tagCount = (int) botpose[7];
-        assertEquals(11 + 7 * tagCount, botpose.length, "el largo lo exige LimelightHelpers");
-        assertEquals(robotPose.getX(), botpose[0], 0.3, "botpose X deberia acercarse a la pose real");
-        assertEquals(robotPose.getY(), botpose[1], 0.3, "botpose Y deberia acercarse a la pose real");
+        assertEquals(11 + 7 * tagCount, botpose.length, "the length is what LimelightHelpers demands");
+        assertEquals(robotPose.getX(), botpose[0], 0.3, "botpose X should come close to the real pose");
+        assertEquals(robotPose.getY(), botpose[1], 0.3, "botpose Y should come close to the real pose");
     }
 
     @Test
@@ -122,9 +122,9 @@ class SimulatedLimelightTest {
 
         runLoops(10);
 
-        assertEquals(true, device.getBoolean("tv").get(), "el SimDevice deberia reflejar tv");
+        assertEquals(true, device.getBoolean("tv").get(), "the SimDevice should mirror tv");
         assertNotEquals(
-                0.0, device.getDouble("Botpose X (m)").get(), "el SimDevice deberia reflejar botpose");
+                0.0, device.getDouble("Botpose X (m)").get(), "the SimDevice should mirror botpose");
     }
 
     @Test
@@ -151,16 +151,16 @@ class SimulatedLimelightTest {
         assertEquals(
                 0,
                 table.getEntry("botpose_orb_wpiblue").getDoubleArray(new double[] {1.0}).length,
-                "sin heading no deberia haber MegaTag2, igual que en hardware real");
+                "with no heading there should be no MegaTag2, just as on real hardware");
 
-        // Equivalente a LimelightHelpers.SetRobotOrientation(name, yaw, 0, 0, 0, 0, 0).
+        // Equivalent to LimelightHelpers.SetRobotOrientation(name, yaw, 0, 0, 0, 0, 0).
         table.getEntry("robot_orientation_set")
                 .setDoubleArray(
                         new double[] {robotPose.getRotation().getDegrees(), 0.0, 0.0, 0.0, 0.0, 0.0});
         runLoops(10);
 
         double[] orb = table.getEntry("botpose_orb_wpiblue").getDoubleArray(new double[0]);
-        assertTrue(orb.length >= 11, "MegaTag2 deberia publicar una pose completa");
+        assertTrue(orb.length >= 11, "MegaTag2 should publish a complete pose");
         assertEquals(robotPose.getX(), orb[0], 0.3);
         assertEquals(robotPose.getY(), orb[1], 0.3);
     }
@@ -171,7 +171,7 @@ class SimulatedLimelightTest {
         NetworkTable table = NetworkTableInstance.getDefault().getTable(CAMERA);
         assertEquals(1.0, table.getEntry("tv").getDouble(-1.0), 1e-9);
 
-        // Equivalente a LimelightHelpers.SetFiducialIDFiltersOverride(name, new int[] {99}).
+        // Equivalent to LimelightHelpers.SetFiducialIDFiltersOverride(name, new int[] {99}).
         table.getEntry("fiducial_id_filters_set").setDoubleArray(new double[] {99.0});
         runLoops(5);
 
@@ -179,9 +179,9 @@ class SimulatedLimelightTest {
     }
 
     /**
-     * Borra las keys que el robot code le escribe a la camara. Los tests comparten la
-     * instancia global de NetworkTables, asi que sin esto un filtro puesto por un caso
-     * dejaria ciego al siguiente.
+     * Clears the keys the robot code writes to the camera. The tests share the global
+     * NetworkTables instance, so without this a filter installed by one case would blind the
+     * next.
      */
     private static void clearRobotInputs() {
         NetworkTable table = NetworkTableInstance.getDefault().getTable(CAMERA);
@@ -192,7 +192,7 @@ class SimulatedLimelightTest {
         table.getEntry("pipeline").setDouble(0.0);
     }
 
-    /** Avanza el reloj simulado y corre el ciclo de la camara, como haria un TimedRobot. */
+    /** Advances the simulated clock and runs the camera's cycle, as a TimedRobot would. */
     private void runLoops(int count) {
         for (int i = 0; i < count; i++) {
             SimHooks.stepTiming(LOOP_PERIOD);
@@ -201,8 +201,7 @@ class SimulatedLimelightTest {
     }
 
     /**
-     * Construye una pose de robot a {@code distance} metros del frente del tag, mirandolo de
-     * cara.
+     * Builds a robot pose {@code distance} metres in front of the tag, facing it head on.
      */
     private Pose2d poseFacingTag(int tagId, double distance) {
         Pose3d tag = layout.getTagPose(tagId).orElseThrow();

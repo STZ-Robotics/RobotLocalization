@@ -7,16 +7,16 @@ import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 
 /**
- * Una medicion de pose lista para entregarle al pose estimator.
+ * A pose measurement ready to hand to the pose estimator.
  *
- * <p>Es exactamente la terna que espera {@code addVisionMeasurement}: donde cree la fuente que esta
- * el robot, cuando lo vio, y cuanto confia en ello.
+ * <p>It is exactly the triple {@code addVisionMeasurement} expects: where the source thinks the
+ * robot is, when it saw it, and how much it trusts that.
  *
- * @param pose             pose del robot en el campo, con origen azul.
- * @param timestampSeconds instante de la <b>captura</b>, no el de la lectura, en la base de tiempo
- *                         del FPGA. Fecharlo mal es la forma mas comun de meterle ruido a un pose
- *                         estimator sin que salte ningun error.
- * @param stdDevs          desviaciones estandar {@code [x, y, theta]}, en metros y radianes. Ver
- *                         {@link StdDevStrategies} para calcularlas.
+ * @param pose             robot pose on the field, blue-origin.
+ * @param timestampSeconds the instant of <b>capture</b>, not of the read, in the FPGA time base.
+ *                         Stamping this wrong is the most common way to feed noise into a pose
+ *                         estimator without any error showing up.
+ * @param stdDevs          standard deviations {@code [x, y, theta]}, in metres and radians. See
+ *                         {@link StdDevStrategies} to compute them.
  */
 public record PoseSample(Pose2d pose, double timestampSeconds, Matrix<N3, N1> stdDevs) {}

@@ -17,36 +17,37 @@ import java.util.Optional;
 import java.util.function.BiFunction;
 
 /**
- * Un Meta Quest con QuestNav como fuente de pose.
+ * A Meta Quest running QuestNav as a pose source.
  *
- * <p>Envuelve el {@code QuestNav} del vendordep: consume los frames sin leer, deshace la transformada
- * de montaje para pasar de la pose del headset a la del robot, y descarta lo que llegue sin
- * tracking valido.
+ * <p>It wraps the vendordep's {@code QuestNav}: it consumes the unread frames, undoes the mounting
+ * transform to go from the headset pose to the robot pose, and discards anything that arrives without
+ * valid tracking.
  *
- * <h2>Un VIO no es una camara</h2>
- * No hay tags, ni distancia, ni ambiguedad: el error de un VIO no depende de lo lejos que este de
- * nada, sino de cuanto lleva sin que lo corrijan. Por eso la estrategia por defecto es
- * {@link StdDevStrategies#vioTimeDrift}, y por eso hay que llamar a {@link #notifyPoseReset()}
- * cuando el robot le manda un {@code setPose} al headset: ahi la deriva real vuelve a cero y la
- * estrategia tiene que enterarse.
+ * <h2>A VIO is not a camera</h2>
+ * There are no tags, no distance and no ambiguity: a VIO's error does not depend on how far it is
+ * from anything, but on how long it has gone without being corrected. That is why the default
+ * strategy is {@link StdDevStrategies#vioTimeDrift}, and why you have to call
+ * {@link #notifyPoseReset()} when the robot sends a {@code setPose} to the headset: that is where the
+ * real drift goes back to zero, and the strategy has to hear about it.
  *
- * <h2>Se queda con el frame mas nuevo</h2>
- * El headset publica a 100 Hz y el robot corre a 50, asi que cada ciclo hay dos o mas frames
- * pendientes. Se usa el ultimo con tracking valido. Meterlos todos al estimator tampoco estaria mal,
- * pero el mas nuevo ya contiene la informacion de los anteriores y cuesta la mitad.
+ * <h2>It keeps the newest frame</h2>
+ * The headset publishes at 100 Hz and the robot runs at 50, so every cycle has two or more frames
+ * pending. The last one with valid tracking is used. Feeding them all to the estimator would not be
+ * wrong either, but the newest already contains the information of the earlier ones and costs half as
+ * much.
  *
- * <h2>El aviso del timestamp</h2>
- * En simulacion, si {@code SimulatedQuestNav} publica en la misma instancia de NetworkTables que
- * consume el robot, {@code PoseFrame.dataTimestamp()} vale 1 microsegundo constante. Esta fuente lo
- * detecta y avisa una sola vez en lugar de meterle al pose estimator mediciones fechadas en el ano
- * cero, que es justo el fallo silencioso que hay que evitar. La solucion es encender
- * {@code withNetworkClient(true)} en el simulador.
+ * <h2>The timestamp warning</h2>
+ * In simulation, if {@code SimulatedQuestNav} publishes on the same NetworkTables instance the robot
+ * consumes, {@code PoseFrame.dataTimestamp()} is a constant 1 microsecond. This source detects that
+ * and warns once instead of feeding the pose estimator measurements dated to year zero, which is
+ * exactly the silent failure worth avoiding. The fix is to switch on
+ * {@code withNetworkClient(true)} in the simulator.
  */
 public class QuestNavPoseSource extends PoseSource {
 
     /**
-     * Por debajo de este timestamp se asume que el valor es el centinela de NetworkTables y no un
-     * instante real. Un robot nunca tiene un frame legitimo fechado en el primer milisegundo.
+     * Below this timestamp the value is assumed to be the NetworkTables sentinel rather than a real
+     * instant. A robot never has a legitimate frame dated within the first millisecond.
      */
     private static final double SENTINEL_TIMESTAMP_SECONDS = 1e-3;
 
@@ -60,12 +61,12 @@ public class QuestNavPoseSource extends PoseSource {
     private String detail = "";
 
     /**
-     * Crea la fuente con la configuracion recomendada para un VIO.
+     * Creates the source with the recommended configuration for a VIO.
      *
-     * @param name           nombre de la fuente.
-     * @param robotToHeadset transformada del origen del robot al headset, el mismo
-     *                       {@code ROBOT_TO_QUEST} que usa tu subsistema.
-     * @return la fuente.
+     * @param name           source name.
+     * @param robotToHeadset transform from the robot origin to the headset, the same
+     *                       {@code ROBOT_TO_QUEST} your subsystem uses.
+     * @return the source.
      */
     public static QuestNavPoseSource create(String name, Transform3d robotToHeadset) {
         return new QuestNavPoseSource(
@@ -73,12 +74,12 @@ public class QuestNavPoseSource extends PoseSource {
     }
 
     /**
-     * Crea la fuente.
+     * Creates the source.
      *
-     * @param name           nombre de la fuente.
-     * @param robotToHeadset transformada del origen del robot al headset.
-     * @param questNav       instancia del vendordep; se inyecta para poder probarla.
-     * @param config         umbrales de los filtros.
+     * @param name           source name.
+     * @param robotToHeadset transform from the robot origin to the headset.
+     * @param questNav       the vendordep instance; injected so it can be tested.
+     * @param config         filter thresholds.
      */
     public QuestNavPoseSource(
             String name, Transform3d robotToHeadset, QuestNav questNav, PoseSourceConfig config) {
@@ -86,17 +87,17 @@ public class QuestNavPoseSource extends PoseSource {
         this.questNav = questNav;
         this.robotToHeadset = robotToHeadset;
 
-        // Un Quest recien corregido es extremadamente preciso y se degrada con el tiempo. Los
-        // numeros son un punto de partida razonable, no una caracterizacion del hardware.
+        // A freshly corrected Quest is extremely precise and degrades over time. The numbers are a
+        // reasonable starting point, not a characterisation of the hardware.
         this.driftStrategy = StdDevStrategies.vioTimeDrift(0.02, 0.035, 0.002, 0.0002);
         setStdDevsStrategy(driftStrategy);
     }
 
     /**
-     * Margen alrededor del campo dentro del cual una pose sigue siendo valida.
+     * Margin around the field within which a pose is still valid.
      *
-     * @param meters margen en metros.
-     * @return esta misma fuente.
+     * @param meters margin in metres.
+     * @return this same source.
      */
     public QuestNavPoseSource withFieldMargin(double meters) {
         this.fieldMarginMeters = meters;
@@ -104,12 +105,12 @@ public class QuestNavPoseSource extends PoseSource {
     }
 
     /**
-     * Controla si se descartan los frames sin tracking valido. Apagarlo casi nunca es buena idea:
-     * durante una perdida de tracking el headset repite la ultima pose buena, que enseguida deja de
-     * describir donde esta el robot.
+     * Controls whether frames without valid tracking are discarded. Switching it off is almost never
+     * a good idea: during a tracking loss the headset repeats the last good pose, which very soon
+     * stops describing where the robot is.
      *
-     * @param enabled true para exigir tracking.
-     * @return esta misma fuente.
+     * @param enabled true to require tracking.
+     * @return this same source.
      */
     public QuestNavPoseSource withRequireTracking(boolean enabled) {
         this.requireTracking = enabled;
@@ -117,10 +118,10 @@ public class QuestNavPoseSource extends PoseSource {
     }
 
     /**
-     * Pone una estrategia de desviaciones propia, sustituyendo a la de deriva.
+     * Installs your own deviation strategy, replacing the drift one.
      *
-     * @param strategy estrategia de {@link StdDevStrategies}.
-     * @return esta misma fuente.
+     * @param strategy a strategy from {@link StdDevStrategies}.
+     * @return this same source.
      */
     public QuestNavPoseSource withStdDevsStrategy(
             BiFunction<Double, Integer, Matrix<N3, N1>> strategy) {
@@ -129,39 +130,39 @@ public class QuestNavPoseSource extends PoseSource {
     }
 
     /**
-     * Avisa de que el headset acaba de ser reanclado y su deriva volvio a cero.
+     * Signals that the headset has just been re-anchored and its drift went back to zero.
      *
-     * <p>Llamalo justo despues de {@code questNav.setPose(...)}. Sin esto la estrategia de deriva
-     * sigue inflando la incertidumbre para siempre y el estimator termina ignorando un sensor que
-     * acaba de quedar perfecto.
+     * <p>Call it right after {@code questNav.setPose(...)}. Without this the drift strategy keeps
+     * inflating the uncertainty forever and the estimator ends up ignoring a sensor that has just
+     * become perfect.
      */
     public void notifyPoseReset() {
         driftStrategy.reset();
     }
 
     /**
-     * Reancla el headset y avisa a la estrategia de deriva, en un solo paso.
+     * Re-anchors the headset and notifies the drift strategy, in a single step.
      *
-     * @param robotPose pose del robot en el campo que el headset deberia reportar.
+     * @param robotPose the robot's field pose the headset should report.
      */
     public void resetPose(Pose2d robotPose) {
         questNav.setPose(new Pose3d(robotPose).transformBy(robotToHeadset));
         notifyPoseReset();
     }
 
-    /** @return la instancia de QuestNav que se esta usando. */
+    /** @return the QuestNav instance in use. */
     public QuestNav getQuestNav() {
         return questNav;
     }
 
-    /** @return segundos desde la ultima correccion del headset. */
+    /** @return seconds since the headset was last corrected. */
     public double getSecondsSinceReset() {
         return driftStrategy.elapsedSeconds();
     }
 
     /**
-     * Llamalo cada ciclo, junto al resto del robot code. Es lo que le permite a {@code QuestNav}
-     * atender las respuestas de sus comandos.
+     * Call this every cycle, alongside the rest of the robot code. It is what lets {@code QuestNav}
+     * service its command responses.
      */
     public void periodic() {
         questNav.commandPeriodic();
@@ -170,20 +171,20 @@ public class QuestNavPoseSource extends PoseSource {
     @Override
     public Optional<PoseSample> getMeasurement() {
         if (!questNav.isConnected()) {
-            // Se reporta la latencia medida y no el umbral: el criterio exacto lo decide
-            // questnavlib, y afirmar un limite que no es el que aplica confunde mas que ayudar.
-            // Si este numero sale alto de forma sostenida, los frames llegan en rafagas --- mira
-            // las opciones de publicacion del simulador, no el headset.
+            // The measured latency is reported rather than the threshold: questnavlib decides the
+            // exact criterion, and asserting a limit that is not the one in force confuses more than
+            // it helps. If this number is sustainedly high, the frames are arriving in bursts --- look
+            // at the simulator's publishing options, not at the headset.
             detail =
                     String.format(
-                            "QuestNav lo da por desconectado; el ultimo frame llego hace %.0f ms",
+                            "QuestNav considers it disconnected; the last frame arrived %.0f ms ago",
                             questNav.getLatency());
             return Optional.empty();
         }
 
         PoseFrame[] frames = questNav.getAllUnreadPoseFrames();
         if (frames.length == 0) {
-            detail = "conectado pero sin frames nuevos este ciclo";
+            detail = "connected but no new frames this cycle";
             return Optional.empty();
         }
 
@@ -195,32 +196,32 @@ public class QuestNavPoseSource extends PoseSource {
             }
         }
         if (newest == null) {
-            detail = frames.length + " frames, ninguno con tracking valido";
+            detail = frames.length + " frames, none with valid tracking";
             return Optional.empty();
         }
 
         if (!isTimestampUsable(newest.dataTimestamp())) {
-            detail = "dataTimestamp = " + newest.dataTimestamp() + " s, es el centinela de NT";
+            detail = "dataTimestamp = " + newest.dataTimestamp() + " s, that is the NT sentinel";
             return Optional.empty();
         }
 
-        detail = String.format("frame %d, %.1f s desde el ultimo reset", newest.frameCount(),
+        detail = String.format("frame %d, %.1f s since the last reset", newest.frameCount(),
                 getSecondsSinceReset());
 
         Pose2d robotPose =
                 newest.questPose3d().transformBy(robotToHeadset.inverse()).toPose2d();
 
-        // Ni distancia ni tags: a la estrategia de deriva le dan igual y los ignora.
+        // Neither distance nor tags: the drift strategy does not care and ignores them.
         return Optional.of(
                 new PoseSample(robotPose, newest.dataTimestamp(), computeStdDevs(0.0, 1)));
     }
 
     /**
-     * Detecta el timestamp centinela de NetworkTables.
+     * Detects the NetworkTables sentinel timestamp.
      *
-     * <p>Fechar mal una medicion es peor que no tenerla: el pose estimator la interpola hacia atras
-     * contra su historial y corrompe el resultado sin que salte ningun error. Mejor descartar y
-     * decir por que.
+     * <p>Mis-dating a measurement is worse than not having it: the pose estimator interpolates it
+     * backwards against its history and corrupts the result with no error raised. Better to discard
+     * and say why.
      */
     private boolean isTimestampUsable(double timestamp) {
         if (timestamp > SENTINEL_TIMESTAMP_SECONDS) {
@@ -231,11 +232,12 @@ public class QuestNavPoseSource extends PoseSource {
             DriverStation.reportWarning(
                     "[QuestNavPoseSource] '"
                             + getName()
-                            + "': dataTimestamp vale "
+                            + "': dataTimestamp is "
                             + timestamp
-                            + " s, que es el centinela de NetworkTables para valores publicados en la"
-                            + " misma instancia que los consume. Se descartan las mediciones. En"
-                            + " simulacion, enciende QuestNavSimConfig.withNetworkClient(true).",
+                            + " s, which is the NetworkTables sentinel for values published on the"
+                            + " same instance that consumes them. Measurements are being discarded."
+                            + " In simulation, switch on"
+                            + " QuestNavSimConfig.withNetworkClient(true).",
                     false);
         }
         return false;
@@ -245,11 +247,11 @@ public class QuestNavPoseSource extends PoseSource {
     public boolean isPoseValid(Pose2d pose) {
         boolean valid = PoseFusion.isInField(pose, fieldMarginMeters);
         if (!valid) {
-            // Casi siempre significa lo mismo: nadie ha llamado a resetPose(), asi que el headset
-            // sigue reportando en su origen arbitrario y no en el del campo.
+            // It almost always means the same thing: nobody has called resetPose(), so the headset
+            // is still reporting in its arbitrary origin rather than the field's.
             detail =
                     String.format(
-                            "pose (%.2f, %.2f) fuera del campo: falta un resetPose()?",
+                            "pose (%.2f, %.2f) outside the field: is a resetPose() missing?",
                             pose.getX(), pose.getY());
         }
         return valid;

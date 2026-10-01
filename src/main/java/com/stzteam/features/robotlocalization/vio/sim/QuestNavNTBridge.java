@@ -22,19 +22,19 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * El puente de NetworkTables: publica los topics que publica un Meta Quest con QuestNav, y atiende
- * los comandos que le manda el robot code.
+ * The NetworkTables bridge: it publishes the topics a Meta Quest running QuestNav publishes, and
+ * services the commands the robot code sends it.
  *
- * <p>Se usan los <b>mismos adaptadores protobuf que usa el vendor</b>
- * ({@link FrameDataProto}, {@link DeviceDataProto}, {@link CommandProto},
- * {@link CommandResponseProto}) en vez de reimplementar la serializacion. Compartir el adaptador es
- * lo que garantiza compatibilidad de wire: si QuestNav cambia el esquema, esto deja de compilar en
- * vez de publicar bytes que el robot code no sabe leer.
+ * <p>It uses the <b>same protobuf adapters the vendor uses</b> ({@link FrameDataProto},
+ * {@link DeviceDataProto}, {@link CommandProto}, {@link CommandResponseProto}) instead of
+ * reimplementing the serialization. Sharing the adapter is what guarantees wire compatibility: if
+ * QuestNav changes the schema, this stops compiling instead of publishing bytes the robot code cannot
+ * read.
  *
  * <h2>Topics</h2>
  * <table>
- *   <caption>Esquema de la tabla {@code QuestNav}</caption>
- *   <tr><th>Topic</th><th>Direccion</th><th>Tipo</th></tr>
+ *   <caption>Schema of the {@code QuestNav} table</caption>
+ *   <tr><th>Topic</th><th>Direction</th><th>Type</th></tr>
  *   <tr><td>{@code frameData}</td><td>headset &rarr; robot</td><td>{@code ProtobufQuestNavFrameData}</td></tr>
  *   <tr><td>{@code deviceData}</td><td>headset &rarr; robot</td><td>{@code ProtobufQuestNavDeviceData}</td></tr>
  *   <tr><td>{@code version}</td><td>headset &rarr; robot</td><td>{@code String}</td></tr>
@@ -57,49 +57,49 @@ public class QuestNavNTBridge implements AutoCloseable {
     private final StructPublisher<Pose3d> questPosePublisher;
     private final StructPublisher<Pose3d> reportedRobotPosePublisher;
 
-    // Los mensajes de quickbuf son mutables y se reutilizan a proposito: publicar serializa en el
-    // momento, asi que no hace falta una instancia nueva por frame.
+    // The quickbuf messages are mutable and reused on purpose: publishing serializes on the spot, so
+    // a new instance per frame is unnecessary.
     private final Data.ProtobufQuestNavFrameData cachedFrame = Data.ProtobufQuestNavFrameData.newInstance();
     private final Data.ProtobufQuestNavDeviceData cachedDevice = Data.ProtobufQuestNavDeviceData.newInstance();
     private final Commands.ProtobufQuestNavCommandResponse cachedResponse =
             Commands.ProtobufQuestNavCommandResponse.newInstance();
 
     /**
-     * Una peticion del robot code, ya extraida a tipos de Java.
+     * A request from the robot code, already extracted into Java types.
      *
-     * <p>Se copia el contenido en cuanto se lee de la cola: los mensajes de quickbuf se reutilizan
-     * internamente, y guardarse una referencia es una forma silenciosa de leer basura mas tarde.
+     * <p>The content is copied as soon as it is read off the queue: the quickbuf messages are reused
+     * internally, and holding on to a reference is a silent way to read garbage later.
      *
-     * @param commandId identificador que hay que devolver en la respuesta.
-     * @param type      tipo de comando.
-     * @param targetPose pose objetivo, presente solo en un POSE_RESET.
+     * @param commandId the identifier that has to be echoed back in the response.
+     * @param type      command type.
+     * @param targetPose target pose, present only in a POSE_RESET.
      */
     public record Request(int commandId, Commands.QuestNavCommandType type, Optional<Pose3d> targetPose) {}
 
     /**
-     * Crea el puente sobre la instancia global de NetworkTables.
+     * Creates the bridge on the global NetworkTables instance.
      *
-     * @param config configuracion de la camara simulada.
+     * @param config the simulated device's configuration.
      */
     public QuestNavNTBridge(QuestNavSimConfig config) {
         this(config, NetworkTableInstance.getDefault());
     }
 
     /**
-     * Crea el puente sobre una instancia concreta de NetworkTables.
+     * Creates the bridge on a specific NetworkTables instance.
      *
-     * @param config   configuracion de la camara simulada.
-     * @param instance instancia de NetworkTables a usar.
+     * @param config   the simulated device's configuration.
+     * @param instance the NetworkTables instance to use.
      */
     public QuestNavNTBridge(QuestNavSimConfig config, NetworkTableInstance instance) {
         this.instance = instance;
         this.table = instance.getTable(config.tableName());
 
-        // Las opciones del publicador no son decoracion. Por defecto NetworkTables agrupa los
-        // valores y los manda cada ~100 ms; un headset real escupe frames a 100 Hz por el cable.
-        // Sin esto el robot recibe rafagas cada 100 ms, el 80% de sus ciclos no ve ningun frame
-        // nuevo, y QuestNav.isConnected() --- que mide cuanto hace que llego el ultimo --- pasa mas
-        // tiempo en false que en true.
+        // The publisher options are not decoration. By default NetworkTables batches values and
+        // sends them every ~100 ms; a real headset spits frames down the wire at 100 Hz. Without
+        // this the robot receives bursts every 100 ms, 80% of its cycles see no new frame, and
+        // QuestNav.isConnected() --- which measures how long ago the last one arrived --- spends more
+        // time false than true.
         framePublisher =
                 table
                         .getProtobufTopic("frameData", new FrameDataProto())
@@ -137,20 +137,20 @@ public class QuestNavNTBridge implements AutoCloseable {
                 telemetry.getStructTopic("reportedRobotPose", Pose3d.struct).publish();
     }
 
-    /** @return la tabla de NetworkTables sobre la que se publica. */
+    /** @return the NetworkTables table being published to. */
     public NetworkTable table() {
         return table;
     }
 
     /**
-     * Publica un frame con un timestamp explicito.
+     * Publishes a frame with an explicit timestamp.
      *
-     * <p>El timestamp explicito es imprescindible: el headset va a 100 Hz y el ciclo del robot a 50,
-     * asi que cada ciclo publica varios frames. Sin separarlos en el tiempo, el robot code los veria
-     * como simultaneos y {@code PoseFrame.dataTimestamp()} --- que sale del reloj de NetworkTables,
-     * no del protobuf --- quedaria inservible para fechar mediciones.
+     * <p>The explicit timestamp is essential: the headset runs at 100 Hz and the robot cycle at 50, so
+     * every cycle publishes several frames. Without separating them in time, the robot code would see
+     * them as simultaneous and {@code PoseFrame.dataTimestamp()} --- which comes from the
+     * NetworkTables clock, not from the protobuf --- would be useless for dating measurements.
      *
-     * @param frame frame a publicar.
+     * @param frame the frame to publish.
      */
     public void publishFrame(QuestNavFrame frame) {
         cachedFrame.clear();
@@ -164,10 +164,10 @@ public class QuestNavNTBridge implements AutoCloseable {
     }
 
     /**
-     * Publica el estado del dispositivo.
+     * Publishes the device's state.
      *
-     * @param batteryPercent      carga de bateria.
-     * @param trackingLostCounter cuantas veces se ha perdido el tracking.
+     * @param batteryPercent      battery charge.
+     * @param trackingLostCounter how many times tracking has been lost.
      */
     public void publishDeviceData(int batteryPercent, int trackingLostCounter) {
         cachedDevice.clear();
@@ -176,12 +176,12 @@ public class QuestNavNTBridge implements AutoCloseable {
     }
 
     /**
-     * Publica las poses de telemetria que dibuja AdvantageScope. No forman parte del protocolo de
-     * QuestNav: van en la subtabla {@code sim} para que quede claro que son nuestras.
+     * Publishes the telemetry poses AdvantageScope draws. They are not part of the QuestNav protocol:
+     * they go in the {@code sim} subtable to make clear they are ours.
      *
-     * @param truePose          pose real del robot.
-     * @param questPose         pose que el headset esta reportando.
-     * @param reportedRobotPose pose de robot que se deduce de lo que reporta el headset.
+     * @param truePose          the robot's real pose.
+     * @param questPose         the pose the headset is reporting.
+     * @param reportedRobotPose the robot pose deduced from what the headset reports.
      */
     public void publishTelemetry(Pose3d truePose, Pose3d questPose, Pose3d reportedRobotPose) {
         truePosePublisher.set(truePose);
@@ -190,9 +190,9 @@ public class QuestNavNTBridge implements AutoCloseable {
     }
 
     /**
-     * Lee los comandos que el robot code publico desde la ultima llamada.
+     * Reads the commands the robot code published since the last call.
      *
-     * @return las peticiones pendientes, en orden de llegada.
+     * @return the pending requests, in arrival order.
      */
     public List<Request> readRequests() {
         List<Request> requests = new ArrayList<>();
@@ -213,22 +213,22 @@ public class QuestNavNTBridge implements AutoCloseable {
     }
 
     /**
-     * Empuja al cable lo publicado en este ciclo, sin esperar al temporizador de NetworkTables.
+     * Pushes what was published this cycle onto the wire, without waiting for the NetworkTables
+     * timer.
      *
-     * <p>Solo hace falta cuando se publica como cliente de red: ahi los valores cruzan un socket, y
-     * dejarlos en el buffer hasta el siguiente flush convierte 100 Hz de frames en rafagas de 10 Hz.
+     * <p>It is only needed when publishing as a network client: there the values cross a socket, and
+     * leaving them in the buffer until the next flush turns 100 Hz of frames into 10 Hz bursts.
      */
     public void flush() {
         instance.flush();
     }
 
     /**
-     * Contesta a un comando. El robot code empareja la respuesta con la peticion por el
-     * {@code commandId}.
+     * Answers a command. The robot code matches the response to the request by {@code commandId}.
      *
-     * @param commandId    identificador de la peticion.
-     * @param success      si el comando se pudo ejecutar.
-     * @param errorMessage motivo del fallo, vacio si tuvo exito.
+     * @param commandId    the request's identifier.
+     * @param success      whether the command could be executed.
+     * @param errorMessage reason for the failure, empty on success.
      */
     public void publishResponse(int commandId, boolean success, String errorMessage) {
         cachedResponse.clear();
@@ -236,7 +236,7 @@ public class QuestNavNTBridge implements AutoCloseable {
         responsePublisher.set(cachedResponse);
     }
 
-    /** Cierra los publicadores y el suscriptor. */
+    /** Closes the publishers and the subscriber. */
     @Override
     public void close() {
         framePublisher.close();

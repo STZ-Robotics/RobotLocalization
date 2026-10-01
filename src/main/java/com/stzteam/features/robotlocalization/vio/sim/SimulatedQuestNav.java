@@ -19,14 +19,14 @@ import java.util.Map;
 import java.util.Random;
 
 /**
- * Un Meta Quest con QuestNav, simulado.
+ * A Meta Quest running QuestNav, simulated.
  *
- * <p>Publica en NetworkTables exactamente lo que publica un headset real, asi que el robot code de
- * produccion --- el que usa {@code gg.questnav.questnav.QuestNav} --- funciona sin cambios y sin
- * hardware. Es la contraparte de {@code SimulatedLimelight}: alli hacemos de camara, aqui hacemos
- * de headset.
+ * <p>It publishes to NetworkTables exactly what a real headset publishes, so production robot code
+ * --- the code that uses {@code gg.questnav.questnav.QuestNav} --- works unchanged and without
+ * hardware. It is the counterpart of {@code SimulatedLimelight}: there we stand in for the camera,
+ * here we stand in for the headset.
  *
- * <h2>Uso</h2>
+ * <h2>Usage</h2>
  * <pre>{@code
  * public class Robot extends TimedRobot {
  *     private final SimulatedQuestNav quest =
@@ -41,40 +41,40 @@ import java.util.Random;
  * }
  * }</pre>
  *
- * El {@code Transform3d} es el mismo {@code ROBOT_TO_QUEST} que le pasas a tu subsistema real.
+ * The {@code Transform3d} is the same {@code ROBOT_TO_QUEST} you pass to your real subsystem.
  *
- * <h2>Lo que hace distinto a una camara simulada</h2>
+ * <h2>What makes it different from a simulated camera</h2>
  * <ul>
- *   <li><b>Siempre reporta algo.</b> Una Limelight ve el tag o no lo ve; un Quest siempre da una
- *       pose, solo que con error. Por eso el contenido de verdad esta en {@link VioErrorModel} y no
- *       en la geometria.</li>
- *   <li><b>Varios frames por ciclo.</b> El headset va a 100 Hz y el robot a 50, asi que cada
- *       {@code periodic()} publica ~2 frames con timestamps separados 10 ms, interpolando la pose
- *       entre medias. Eso es lo que hace que {@code getAllUnreadPoseFrames()} devuelva lo que
- *       devolveria de verdad.</li>
- *   <li><b>Origen propio.</b> El Quest no reporta poses de campo hasta que el robot code llama a
- *       {@code setPose()}. Ver {@link QuestOriginFrame}.</li>
+ *   <li><b>It always reports something.</b> A Limelight either sees the tag or it does not; a Quest
+ *       always gives a pose, just with error. That is why the real content lives in
+ *       {@link VioErrorModel} and not in the geometry.</li>
+ *   <li><b>Several frames per cycle.</b> The headset runs at 100 Hz and the robot at 50, so each
+ *       {@code periodic()} publishes ~2 frames with timestamps 10 ms apart, interpolating the pose in
+ *       between. That is what makes {@code getAllUnreadPoseFrames()} return what it would really
+ *       return.</li>
+ *   <li><b>An origin of its own.</b> The Quest does not report field poses until the robot code calls
+ *       {@code setPose()}. See {@link QuestOriginFrame}.</li>
  * </ul>
  *
- * <h2>Cuidado con {@code dataTimestamp()}</h2>
- * Por defecto se publica en la misma instancia de NetworkTables que consume el robot code, y en ese
- * caso {@code PoseFrame.dataTimestamp()} <b>no sirve</b>: vale 1 microsegundo constante. No es un
- * fallo de esta clase sino de la topologia --- ese valor sale del {@code serverTime} que asigna el
- * servidor NT al <i>recibir</i>, y ntcore marca con el centinela {@code serverTime = 1} todo lo que
- * se publica localmente.
+ * <h2>Mind {@code dataTimestamp()}</h2>
+ * By default publication happens on the same NetworkTables instance the robot code consumes, and in
+ * that case {@code PoseFrame.dataTimestamp()} is <b>useless</b>: it is a constant 1 microsecond. That
+ * is not a bug in this class but in the topology --- that value comes from the {@code serverTime} the
+ * NT server assigns on <i>receipt</i>, and ntcore marks everything published locally with the sentinel
+ * {@code serverTime = 1}.
  *
- * <p>Si tu robot code fusiona por timestamp, que es el caso normal de un pose estimator, enciende
- * {@link QuestNavSimConfig#withNetworkClient(boolean)}: la simulacion pasa a publicar como cliente
- * NT4 contra el servidor del robot, igual que el headset real, y los timestamps salen correctos.
- * Todo lo demas --- pose, tracking, bateria, comandos --- funciona igual en los dos modos.
+ * <p>If your robot code fuses on timestamps, which is the normal case for a pose estimator, switch on
+ * {@link QuestNavSimConfig#withNetworkClient(boolean)}: the simulation then publishes as an NT4 client
+ * against the robot's server, just like the real headset, and the timestamps come out correct.
+ * Everything else --- pose, tracking, battery, commands --- works the same in both modes.
  *
- * <h2>En robot real</h2>
- * El constructor detecta {@code RobotBase.isReal()} y no crea nada. {@link #periodic(Pose2d)} es un
- * retorno inmediato.
+ * <h2>On a real robot</h2>
+ * The constructor detects {@code RobotBase.isReal()} and creates nothing. {@link #periodic(Pose2d)} is
+ * an immediate return.
  */
 public class SimulatedQuestNav implements AutoCloseable {
 
-    /** Tope de frames por ciclo, para que un tiron del bucle no dispare una avalancha. */
+    /** Cap on frames per cycle, so a stall in the loop does not set off an avalanche. */
     private static final int MAX_FRAMES_PER_LOOP = 20;
 
     private static final List<SimulatedQuestNav> INSTANCES = new ArrayList<>();
@@ -84,7 +84,7 @@ public class SimulatedQuestNav implements AutoCloseable {
     private final QuestNavSimConfig config;
     private final boolean enabled;
 
-    /** Instancia de NetworkTables propia, solo si se publica como cliente de red. */
+    /** Our own NetworkTables instance, only when publishing as a network client. */
     private final NetworkTableInstance ownedInstance;
 
     private final QuestNavNTBridge bridge;
@@ -106,20 +106,20 @@ public class SimulatedQuestNav implements AutoCloseable {
     private QuestNavFrame lastFrame;
 
     /**
-     * Crea un headset simulado con la configuracion por defecto.
+     * Creates a simulated headset with the default configuration.
      *
-     * @param robotToHeadset transformada del origen del robot al headset, en convencion WPILib. Es
-     *                       el mismo valor que tu {@code ROBOT_TO_QUEST}.
+     * @param robotToHeadset transform from the robot origin to the headset, in the WPILib convention.
+     *                       It is the same value as your {@code ROBOT_TO_QUEST}.
      */
     public SimulatedQuestNav(Transform3d robotToHeadset) {
         this(robotToHeadset, new QuestNavSimConfig());
     }
 
     /**
-     * Crea un headset simulado.
+     * Creates a simulated headset.
      *
-     * @param robotToHeadset transformada del origen del robot al headset, en convencion WPILib.
-     * @param config         configuracion del modelo de error y de lo que se publica.
+     * @param robotToHeadset transform from the robot origin to the headset, in the WPILib convention.
+     * @param config         configuration of the error model and of what gets published.
      */
     public SimulatedQuestNav(Transform3d robotToHeadset, QuestNavSimConfig config) {
         this.name = config.tableName();
@@ -161,9 +161,9 @@ public class SimulatedQuestNav implements AutoCloseable {
     }
 
     /**
-     * Crea la instancia cliente de NetworkTables que reproduce la topologia real: el headset es un
-     * cliente NT4 y el robot es el servidor. Es lo que hace que {@code PoseFrame.dataTimestamp()}
-     * traiga un {@code serverTime} de verdad. Ver {@link QuestNavSimConfig#withNetworkClient}.
+     * Creates the NetworkTables client instance that reproduces the real topology: the headset is an
+     * NT4 client and the robot is the server. It is what makes {@code PoseFrame.dataTimestamp()} carry
+     * a real {@code serverTime}. See {@link QuestNavSimConfig#withNetworkClient}.
      */
     private static NetworkTableInstance createClientInstance(QuestNavSimConfig config) {
         NetworkTableInstance instance = NetworkTableInstance.create();
@@ -179,18 +179,18 @@ public class SimulatedQuestNav implements AutoCloseable {
     }
 
     /**
-     * Avanza todos los headsets simulados con la misma pose del robot.
+     * Advances every simulated headset with the same robot pose.
      *
-     * @param simulatedRobotPose pose simulada actual del robot.
+     * @param simulatedRobotPose the robot's current simulated pose.
      */
     public static void periodicAll(Pose2d simulatedRobotPose) {
         periodicAll(new Pose3d(simulatedRobotPose));
     }
 
     /**
-     * Avanza todos los headsets simulados con la misma pose del robot.
+     * Advances every simulated headset with the same robot pose.
      *
-     * @param simulatedRobotPose pose simulada actual del robot.
+     * @param simulatedRobotPose the robot's current simulated pose.
      */
     public static void periodicAll(Pose3d simulatedRobotPose) {
         List<SimulatedQuestNav> snapshot;
@@ -203,9 +203,9 @@ public class SimulatedQuestNav implements AutoCloseable {
     }
 
     /**
-     * Devuelve los headsets simulados activos.
+     * Returns the active simulated headsets.
      *
-     * @return una lista inmutable de instancias.
+     * @return an immutable list of instances.
      */
     public static List<SimulatedQuestNav> instances() {
         synchronized (INSTANCES) {
@@ -214,35 +214,34 @@ public class SimulatedQuestNav implements AutoCloseable {
     }
 
     /**
-     * Ciclo del headset. Llamalo desde {@code simulationPeriodic()} con la pose que tu simulacion
-     * considera verdadera.
+     * The headset's cycle. Call it from {@code simulationPeriodic()} with the pose your simulation
+     * treats as the truth.
      *
-     * @param simulatedRobotPose pose simulada actual del robot.
+     * @param simulatedRobotPose the robot's current simulated pose.
      */
     public void periodic(Pose2d simulatedRobotPose) {
         periodic(new Pose3d(simulatedRobotPose));
     }
 
     /**
-     * Ciclo del headset, con pose en 3D.
+     * The headset's cycle, with a 3D pose.
      *
-     * <h2>Que pose pasarle, y cual no</h2>
-     * Tiene que ser la <b>verdad</b>: la pose de tu simulacion de fisica, o la odometria pura de
-     * ruedas. <b>No</b> la que sale de tu pose estimator.
+     * <h2>Which pose to pass, and which not to</h2>
+     * It has to be the <b>truth</b>: the pose from your physics simulation, or pure wheel odometry.
+     * <b>Not</b> the one coming out of your pose estimator.
      *
-     * <p>No es una preferencia de estilo. La fisica alimenta al sensor y el sensor al estimador;
-     * pasarle al sensor la salida del estimador cierra un lazo que no existe en un robot real. Y
-     * tiene un sintoma concreto: un estimator corregido por vision <b>salta</b> en cada ciclo, y
-     * esos saltos entran al modelo de error como aceleraciones de miles de m/s2. El detector de
-     * impactos los confunde con choques, el Quest pierde el tracking sin parar, y cada
-     * re-adquisicion suma su offset hasta que la pose se va del campo.
+     * <p>This is not a style preference. The physics feeds the sensor and the sensor feeds the
+     * estimator; feeding the sensor the estimator's output closes a loop that does not exist on a real
+     * robot. And it has a concrete symptom: a vision-corrected estimator <b>jumps</b> every cycle, and
+     * those jumps enter the error model as accelerations of thousands of m/s2. The impact detector
+     * mistakes them for collisions, the Quest loses tracking non-stop, and each re-acquisition adds its
+     * offset until the pose wanders off the field.
      *
-     * <p>El modelo filtra los saltos aislados con una mediana, pero contra una realimentacion
-     * periodica no hay filtro causal que valga. Si no puedes darle una pose limpia, apaga la
-     * deteccion automatica con
-     * {@link QuestNavSimConfig#withImpactTrackingLoss(boolean)} e inyecta las perdidas a mano.
+     * <p>The model filters isolated jumps with a median, but against periodic feedback no causal filter
+     * will do. If you cannot give it a clean pose, switch the automatic detection off with
+     * {@link QuestNavSimConfig#withImpactTrackingLoss(boolean)} and inject the losses by hand.
      *
-     * @param simulatedRobotPose pose simulada actual del robot, sin correcciones de vision.
+     * @param simulatedRobotPose the robot's current simulated pose, with no vision corrections.
      */
     public void periodic(Pose3d simulatedRobotPose) {
         if (!enabled) {
@@ -280,10 +279,10 @@ public class SimulatedQuestNav implements AutoCloseable {
             viewfinder.update(simulatedRobotPose);
         }
 
-        // Publicando por red hay que empujar el buffer: si no, los frames de este ciclo se quedan
-        // esperando al temporizador de NetworkTables y llegan en rafagas. El robot mide la conexion
-        // por cuanto hace que llego el ultimo frame, asi que una rafaga cada 100 ms lo deja
-        // "desconectado" la mayor parte del tiempo.
+        // When publishing over the network the buffer has to be pushed: otherwise this cycle's frames
+        // sit waiting for the NetworkTables timer and arrive in bursts. The robot measures the
+        // connection by how long ago the last frame arrived, so one burst every 100 ms leaves it
+        // "disconnected" most of the time.
         if (ownedInstance != null && publishing) {
             bridge.flush();
         }
@@ -300,13 +299,13 @@ public class SimulatedQuestNav implements AutoCloseable {
         nextDeviceDataSeconds = now;
     }
 
-    /** Traduce los interruptores del Sim GUI a eventos del modelo de error. */
+    /** Translates the Sim GUI's switches into error model events. */
     private void applySimDeviceRequests(double now) {
         if (simDevice == null) {
             return;
         }
 
-        // Nivel, no flanco: mientras la casilla este marcada, el tracking se mantiene perdido.
+        // Level, not edge: for as long as the box is ticked, tracking stays lost.
         boolean requested = simDevice.forceTrackingLoss();
         if (requested) {
             errorModel.injectTrackingLoss(config.trackingLossSeconds(), now);
@@ -315,7 +314,7 @@ public class SimulatedQuestNav implements AutoCloseable {
             trackingLossLatch = false;
         }
 
-        // Pulso: un solo salto por marca, o la pose brincaria en cada ciclo.
+        // Pulse: one jump per tick, or the pose would hop every cycle.
         if (simDevice.forcePoseJump()) {
             errorModel.injectPoseDiscontinuity(
                     new Translation3d(config.reacquireOffsetMeters(), 0.0, 0.0));
@@ -327,19 +326,19 @@ public class SimulatedQuestNav implements AutoCloseable {
         }
     }
 
-    /** Atiende los comandos que el robot code publico en {@code request}. */
+    /** Services the commands the robot code published to {@code request}. */
     private void handleRobotRequests(Pose3d robotPose, double now) {
         Pose3d headsetPose = robotPose.transformBy(robotToHeadset);
 
         for (QuestNavNTBridge.Request request : bridge.readRequests()) {
             if (request.type() != Commands.QuestNavCommandType.POSE_RESET) {
                 bridge.publishResponse(
-                        request.commandId(), false, "Comando no soportado por la simulacion");
+                        request.commandId(), false, "Command not supported by the simulation");
                 continue;
             }
 
             if (request.targetPose().isEmpty()) {
-                bridge.publishResponse(request.commandId(), false, "POSE_RESET sin targetPose");
+                bridge.publishResponse(request.commandId(), false, "POSE_RESET with no targetPose");
                 continue;
             }
 
@@ -350,13 +349,12 @@ public class SimulatedQuestNav implements AutoCloseable {
     }
 
     /**
-     * Genera y publica los frames que tocan en este ciclo.
+     * Generates and publishes the frames due in this cycle.
      *
-     * <p>El headset corre a su propia frecuencia, no a la del bucle del robot, asi que hay que
-     * ponerse al dia: se emite un frame por cada instante pendiente, interpolando la pose verdadera
-     * entre la del ciclo anterior y la actual. Sin esa interpolacion los frames intermedios serian
-     * copias del mismo valor y el robot code veria una pose escalonada que el hardware real no
-     * produce.
+     * <p>The headset runs at its own rate, not the robot loop's, so it has to catch up: one frame is
+     * emitted for each pending instant, interpolating the true pose between the previous cycle's and
+     * the current one. Without that interpolation the intermediate frames would be copies of the same
+     * value and the robot code would see a staircased pose the real hardware does not produce.
      */
     private void emitFrames(Pose3d robotPose, double now, boolean publishing) {
         double period = 1.0 / config.frameRateHz();
@@ -393,8 +391,8 @@ public class SimulatedQuestNav implements AutoCloseable {
         }
 
         if (emitted >= MAX_FRAMES_PER_LOOP) {
-            // El bucle se atraso tanto que ponerse al dia no tiene sentido: mejor saltar adelante
-            // que arrastrar una deuda que nunca se paga.
+            // The loop fell so far behind that catching up makes no sense: better to jump forward than
+            // to carry a debt that never gets paid.
             nextFrameSeconds = now + period;
         }
     }
@@ -404,9 +402,9 @@ public class SimulatedQuestNav implements AutoCloseable {
     }
 
     /**
-     * Fuerza una perdida de tracking desde codigo, sin pasar por el Sim GUI.
+     * Forces a tracking loss from code, without going through the Sim GUI.
      *
-     * @param durationSeconds cuanto dura.
+     * @param durationSeconds how long it lasts.
      */
     public void injectTrackingLoss(double durationSeconds) {
         if (enabled) {
@@ -415,10 +413,9 @@ public class SimulatedQuestNav implements AutoCloseable {
     }
 
     /**
-     * Inyecta un salto de pose sin perder el tracking, como el que provoca el doble-tap a
-     * passthrough.
+     * Injects a pose jump without losing tracking, like the one the double-tap to passthrough causes.
      *
-     * @param jump desplazamiento en metros.
+     * @param jump displacement in metres.
      */
     public void injectPoseDiscontinuity(Translation3d jump) {
         if (enabled) {
@@ -427,9 +424,9 @@ public class SimulatedQuestNav implements AutoCloseable {
     }
 
     /**
-     * Simula un corte de red: se deja de publicar y el robot ve caer {@code isConnected()}.
+     * Simulates a network drop: publishing stops and the robot sees {@code isConnected()} fall.
      *
-     * @param durationSeconds cuanto dura el corte.
+     * @param durationSeconds how long the drop lasts.
      */
     public void injectLinkLoss(double durationSeconds) {
         if (enabled) {
@@ -438,9 +435,9 @@ public class SimulatedQuestNav implements AutoCloseable {
     }
 
     /**
-     * Cambia el montaje del headset en caliente.
+     * Changes the headset's mounting on the fly.
      *
-     * @param robotToHeadset nueva transformada robot-&gt;headset.
+     * @param robotToHeadset the new robot-&gt;headset transform.
      */
     public void setRobotToHeadset(Transform3d robotToHeadset) {
         this.robotToHeadset = robotToHeadset;
@@ -449,47 +446,47 @@ public class SimulatedQuestNav implements AutoCloseable {
         }
     }
 
-    /** @return el nombre del headset, que es tambien el de la tabla NT. */
+    /** @return the headset's name, which is also the NT table's. */
     public String name() {
         return name;
     }
 
-    /** @return true si la simulacion esta activa. */
+    /** @return true if the simulation is active. */
     public boolean isEnabled() {
         return enabled;
     }
 
-    /** @return la transformada robot-&gt;headset vigente. */
+    /** @return the robot-&gt;headset transform in effect. */
     public Transform3d robotToHeadset() {
         return robotToHeadset;
     }
 
-    /** @return el ultimo frame generado, o {@code null} si todavia no hay ninguno. */
+    /** @return the last generated frame, or {@code null} if there is none yet. */
     public QuestNavFrame lastFrame() {
         return lastFrame;
     }
 
-    /** @return el modelo de error, para inspeccionarlo o ajustarlo desde un test. */
+    /** @return the error model, to inspect or tune it from a test. */
     public VioErrorModel errorModel() {
         return errorModel;
     }
 
-    /** @return el marco de origen del headset. */
+    /** @return the headset's origin frame. */
     public QuestOriginFrame originFrame() {
         return originFrame;
     }
 
-    /** @return la configuracion con la que se creo. */
+    /** @return the configuration it was created with. */
     public QuestNavSimConfig config() {
         return config;
     }
 
-    /** @return el visor, o {@code null} si esta apagado. */
+    /** @return the viewfinder, or {@code null} if it is off. */
     public QuestNavViewfinder viewfinder() {
         return viewfinder;
     }
 
-    /** Libera los recursos. En robot real no hay nada que liberar. */
+    /** Releases the resources. On a real robot there is nothing to release. */
     @Override
     public void close() {
         synchronized (INSTANCES) {
@@ -512,13 +509,13 @@ public class SimulatedQuestNav implements AutoCloseable {
     }
 
     /**
-     * Indica si la simulacion esta entregando datos al robot.
+     * Says whether the simulation is delivering data to the robot.
      *
-     * <p>En modo local siempre es true. Publicando como cliente de red, es false hasta que se
-     * establece la conexion con el servidor NT4 del robot: si se queda en false, el robot no esta
-     * levantando su servidor y no va a llegar ni un frame.
+     * <p>In local mode it is always true. When publishing as a network client, it is false until the
+     * connection to the robot's NT4 server is established: if it stays false, the robot is not bringing
+     * its server up and not a single frame is going to arrive.
      *
-     * @return true si el transporte esta listo.
+     * @return true if the transport is ready.
      */
     public boolean isPublishing() {
         if (!enabled) {
@@ -527,7 +524,7 @@ public class SimulatedQuestNav implements AutoCloseable {
         return ownedInstance == null || ownedInstance.isConnected();
     }
 
-    /** Cierra todos los headsets simulados. Pensado para tests. */
+    /** Closes every simulated headset. Meant for tests. */
     public static void closeAll() {
         List<SimulatedQuestNav> snapshot;
         synchronized (INSTANCES) {

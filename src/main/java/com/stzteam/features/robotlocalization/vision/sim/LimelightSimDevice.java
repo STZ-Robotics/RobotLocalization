@@ -7,26 +7,26 @@ import edu.wpi.first.hal.SimDouble;
 import edu.wpi.first.math.util.Units;
 
 /**
- * Registra la camara simulada como un {@code SimDevice} de HAL para que aparezca sola en el
- * panel "Other Devices" del Sim GUI de WPILib.
+ * Registers the simulated camera as a HAL {@code SimDevice} so it shows up on its own in the
+ * "Other Devices" panel of WPILib's Sim GUI.
  *
- * <p>No hace falta escribir nada de GUI: el Sim GUI agrupa los dispositivos por el prefijo
- * del nombre, asi que todas las camaras creadas por esta feature caen bajo el nodo
- * {@code Limelight}, igual que los {@code CANMotor:TalonFX[n]} de CTRE.
+ * <p>No GUI code is needed: the Sim GUI groups devices by name prefix, so every camera this
+ * feature creates lands under the {@code Limelight} node, just like CTRE's
+ * {@code CANMotor:TalonFX[n]}.
  *
- * <p>Fuera de simulacion {@code SimDevice.create} devuelve {@code null}, asi que la clase
- * entera se convierte en un no-op sin necesidad de sembrar condicionales por todos lados.
+ * <p>Outside simulation {@code SimDevice.create} returns {@code null}, so the whole class
+ * becomes a no-op without having to scatter conditionals everywhere.
  *
- * <h2>Inspeccion y forzado desde tests</h2>
+ * <h2>Inspecting and forcing from tests</h2>
  * <pre>{@code
  * var sim = new SimDeviceSim("Limelight:limelight-front", 0);
  * double tx = sim.getDouble("tx").get();
- * sim.getBoolean("Force No Targets").set(true); // simula perder la vista del tag
+ * sim.getBoolean("Force No Targets").set(true); // simulates losing sight of the tag
  * }</pre>
  */
 public class LimelightSimDevice implements AutoCloseable {
 
-    /** Prefijo que agrupa a todas las camaras de esta feature en el Sim GUI. */
+    /** The prefix that groups every camera of this feature in the Sim GUI. */
     public static final String DEVICE_PREFIX = "Limelight:";
 
     private final SimDevice device;
@@ -52,10 +52,10 @@ public class LimelightSimDevice implements AutoCloseable {
     private final SimBoolean forceNoTargets;
 
     /**
-     * Crea el dispositivo simulado.
+     * Creates the simulated device.
      *
-     * @param cameraName nombre logico de la camara, normalmente el mismo que la tabla NT.
-     * @param index      indice para distinguir varias camaras con el mismo nombre.
+     * @param cameraName the camera's logical name, usually the same as the NT table.
+     * @param index      an index to tell apart several cameras with the same name.
      */
     public LimelightSimDevice(String cameraName, int index) {
         device = SimDevice.create(DEVICE_PREFIX + cameraName, index);
@@ -100,32 +100,32 @@ public class LimelightSimDevice implements AutoCloseable {
         pipeline = device.createDouble("Pipeline", SimDevice.Direction.kOutput, 0.0);
         ledMode = device.createDouble("LED Mode", SimDevice.Direction.kOutput, 0.0);
 
-        // kInput: lo escribe el Sim GUI (o un test) y lo lee la simulacion. Permite probar
-        // "que pasa si de repente pierdo el tag" sin mover el robot.
+        // kInput: the Sim GUI (or a test) writes it and the simulation reads it. It lets you try
+        // "what happens if I suddenly lose the tag" without moving the robot.
         forceNoTargets = device.createBoolean("Force No Targets", SimDevice.Direction.kInput, false);
     }
 
-    /** @return true si estamos en simulacion y el dispositivo existe de verdad. */
+    /** @return true if we are in simulation and the device really exists. */
     public boolean isActive() {
         return device != null;
     }
 
     /**
-     * Indica si alguien pidio desde el Sim GUI que la camara finja no ver nada.
+     * Says whether somebody asked, from the Sim GUI, for the camera to pretend it sees nothing.
      *
-     * @return true si hay que descartar las detecciones de este ciclo.
+     * @return true if this cycle's detections should be discarded.
      */
     public boolean forceNoTargets() {
         return forceNoTargets != null && forceNoTargets.get();
     }
 
     /**
-     * Vuelca un frame en los campos del dispositivo. Se llama en el mismo sitio y con la
-     * misma frecuencia que {@link LimelightNTPublisher#publish}, para que el Sim GUI y
-     * NetworkTables nunca muestren ciclos distintos.
+     * Dumps a frame into the device's fields. It is called in the same place and at the same
+     * rate as {@link LimelightNTPublisher#publish}, so the Sim GUI and NetworkTables never show
+     * different cycles.
      *
-     * @param frame  frame ya traducido.
-     * @param inputs entradas leidas este ciclo.
+     * @param frame  the already translated frame.
+     * @param inputs the inputs read this cycle.
      */
     public void update(LimelightFrame frame, LimelightNTInputs inputs) {
         if (device == null) {
@@ -161,7 +161,7 @@ public class LimelightSimDevice implements AutoCloseable {
         ledMode.set(inputs.ledMode());
     }
 
-    /** Libera el dispositivo de HAL. En robot real no hay nada que liberar. */
+    /** Releases the HAL device. On a real robot there is nothing to release. */
     @Override
     public void close() {
         if (device != null) {

@@ -7,26 +7,27 @@ import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
 
 /**
- * El marco de origen del headset, y lo que le pasa cuando llega un POSE_RESET.
+ * The headset's origin frame, and what happens to it when a POSE_RESET arrives.
  *
- * <p>Este es el punto de esta feature que es facil de equivocar, el equivalente al signo de
- * {@code tx} en la Limelight simulada. Vive en su propia clase, con tests puros, por esa razon.
+ * <p>This is the point of this feature that is easy to get wrong, the equivalent of the sign of
+ * {@code tx} in the simulated Limelight. It lives in its own class, with pure tests, for that
+ * reason.
  *
- * <h2>El malentendido que evita</h2>
- * Un Quest <b>no publica la pose del robot en el campo</b>. Publica la pose del headset en un
- * origen propio y arbitrario, el sitio donde estaba cuando arranco la app. Que ese origen coincida
- * con el origen del campo es algo que el robot code tiene que <i>provocar</i>, llamando a
- * {@code setPose()}. Si la simulacion publicara directamente la pose de campo, estaria escondiendo
- * justo el paso que mas equipos se saltan.
+ * <h2>The misunderstanding it prevents</h2>
+ * A Quest <b>does not publish the robot's field pose</b>. It publishes the headset's pose in an
+ * arbitrary origin of its own, the place where it was when the app started. Making that origin
+ * coincide with the field origin is something the robot code has to <i>cause</i>, by calling
+ * {@code setPose()}. If the simulation published the field pose directly, it would be hiding
+ * exactly the step most teams skip.
  *
- * <h2>La cuenta</h2>
- * Si el origen del Quest esta en la pose {@code O} del campo y el headset esta fisicamente en
- * {@code H}, lo que se publica es {@code H} visto desde {@code O}:
+ * <h2>The arithmetic</h2>
+ * If the Quest's origin is at field pose {@code O} and the headset is physically at {@code H}, what
+ * gets published is {@code H} seen from {@code O}:
  *
- * <pre>{@code publicado = H.relativeTo(O)}</pre>
+ * <pre>{@code published = H.relativeTo(O)}</pre>
  *
- * Un POSE_RESET a {@code T} pide que, sin mover el headset, lo publicado pase a valer {@code T}.
- * Despejando {@code O} de la ecuacion de arriba:
+ * A POSE_RESET to {@code T} asks that, without moving the headset, what is published becomes
+ * {@code T}. Solving the equation above for {@code O}:
  *
  * <pre>{@code O = H ∘ T⁻¹}</pre>
  */
@@ -34,29 +35,29 @@ public class QuestOriginFrame {
 
     private Pose3d origin;
 
-    /** Crea un marco cuyo origen coincide con el del campo. */
+    /** Creates a frame whose origin coincides with the field's. */
     public QuestOriginFrame() {
         this(Pose3d.kZero);
     }
 
     /**
-     * Crea un marco con un origen concreto.
+     * Creates a frame with a specific origin.
      *
-     * @param origin pose del origen del Quest, en coordenadas de campo.
+     * @param origin pose of the Quest's origin, in field coordinates.
      */
     public QuestOriginFrame(Pose3d origin) {
         this.origin = origin;
     }
 
     /**
-     * Crea un marco con un origen desplazado al azar, para forzar que el robot code haga bien su
-     * seeding. Con el origen en identidad, un equipo que nunca llama a {@code setPose()} ve poses
-     * de campo correctas por accidente y el bug no aparece hasta la competencia.
+     * Creates a frame with a randomly displaced origin, to force the robot code to do its seeding
+     * properly. With the origin at identity, a team that never calls {@code setPose()} sees correct
+     * field poses by accident and the bug does not show up until competition.
      *
-     * @param translationMeters desplazamiento maximo en metros.
-     * @param rotationDegrees   desviacion maxima de yaw en grados.
-     * @param random            fuente de aleatoriedad, para que el test sea reproducible.
-     * @return un marco con origen arbitrario.
+     * @param translationMeters maximum displacement in metres.
+     * @param rotationDegrees   maximum yaw deviation in degrees.
+     * @param random            the randomness source, so the test stays reproducible.
+     * @return a frame with an arbitrary origin.
      */
     public static QuestOriginFrame randomized(
             double translationMeters, double rotationDegrees, java.util.Random random) {
@@ -68,21 +69,21 @@ public class QuestOriginFrame {
     }
 
     /**
-     * Convierte una pose de campo del headset a lo que el Quest publicaria.
+     * Converts a headset field pose into what the Quest would publish.
      *
-     * @param headsetFieldPose pose real del headset en el campo.
-     * @return la pose en el marco del Quest.
+     * @param headsetFieldPose the headset's real field pose.
+     * @return the pose in the Quest's frame.
      */
     public Pose3d toQuestFrame(Pose3d headsetFieldPose) {
         return headsetFieldPose.relativeTo(origin);
     }
 
     /**
-     * Reancla el origen para que un headset que esta fisicamente en {@code headsetFieldPose} pase a
-     * reportar {@code targetPose}. Es lo que hace un POSE_RESET real.
+     * Re-anchors the origin so a headset physically at {@code headsetFieldPose} starts reporting
+     * {@code targetPose}. This is what a real POSE_RESET does.
      *
-     * @param headsetFieldPose pose real del headset en el campo.
-     * @param targetPose       pose que el robot code quiere que el Quest reporte.
+     * @param headsetFieldPose the headset's real field pose.
+     * @param targetPose       the pose the robot code wants the Quest to report.
      */
     public void reset(Pose3d headsetFieldPose, Pose3d targetPose) {
         origin =
@@ -90,7 +91,7 @@ public class QuestOriginFrame {
                         new Transform3d(targetPose.getTranslation(), targetPose.getRotation()).inverse());
     }
 
-    /** @return la pose del origen del Quest en coordenadas de campo. */
+    /** @return the pose of the Quest's origin in field coordinates. */
     public Pose3d origin() {
         return origin;
     }

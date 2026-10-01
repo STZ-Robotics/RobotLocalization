@@ -19,38 +19,37 @@ import java.util.OptionalDouble;
 import java.util.function.BiFunction;
 
 /**
- * Una camara Limelight como fuente de pose.
+ * A Limelight camera as a pose source.
  *
- * <p>Lee NetworkTables directamente, sin {@code LimelightHelpers}. Esa clase es un archivo que cada
- * equipo copia en su repo, no un artefacto de Maven, asi que una libreria no puede depender de ella
- * --- y tampoco hace falta: el esquema lo conocemos entero porque el simulador de esta misma feature
- * lo escribe.
+ * <p>It reads NetworkTables directly, without {@code LimelightHelpers}. That class is a file each
+ * team copies into its own repo, not a Maven artifact, so a library cannot depend on it --- and does
+ * not need to: we know the whole schema because this feature's own simulator writes it.
  *
- * <p>Como consecuencia util, esta fuente funciona igual contra un Limelight fisico que contra
- * {@code SimulatedLimelight}, sin ninguna rama de codigo para simulacion.
+ * <p>As a useful consequence, this source works identically against a physical Limelight and against
+ * {@code SimulatedLimelight}, with no simulation-specific branch anywhere.
  *
- * <h2>MegaTag1 y MegaTag2</h2>
- * MegaTag1 resuelve la pose solo con lo que ve. MegaTag2 fija el rumbo con el giroscopio del robot y
- * resuelve el resto, lo que lo hace mucho mas estable girando, pero <b>exige</b> que alguien le
- * escriba el rumbo cada ciclo. Esta fuente lo hace sola si le das un
- * {@link LocalizationInputs#gyroHeading()}; es el paso que mas veces se olvida y el que hace que
- * MegaTag2 devuelva ceros sin explicar por que.
+ * <h2>MegaTag1 and MegaTag2</h2>
+ * MegaTag1 solves the pose from what it sees alone. MegaTag2 pins the heading with the robot's gyro
+ * and solves the rest, which makes it far more stable while turning, but it <b>requires</b> that
+ * somebody write the heading to it every cycle. This source does that on its own if you give it a
+ * {@link LocalizationInputs#gyroHeading()}; it is the most frequently forgotten step and the one that
+ * makes MegaTag2 return zeros without explaining why.
  *
- * <p>Con MegaTag2 el rumbo que sale es el que tu le metiste, asi que no aporta informacion nueva:
- * conviene darle una sigma de rumbo enorme para que el estimator lo ignore. Es lo que hace
- * {@link #megaTag2(String)} por defecto.
+ * <p>With MegaTag2 the heading that comes out is the one you fed in, so it carries no new
+ * information: it is worth giving it an enormous heading sigma so the estimator ignores it. That is
+ * what {@link #megaTag2(String)} does by default.
  */
 public class LimelightPoseSource extends PoseSource {
 
-    /** Que solucion de Limelight consumir. */
+    /** Which Limelight solution to consume. */
     public enum Mode {
-        /** Pose resuelta solo con vision. Sirve para inicializar el rumbo. */
+        /** Pose solved from vision alone. Useful to initialise the heading. */
         MEGATAG_1,
-        /** Pose con el rumbo fijado por el giroscopio. Mucho mas estable girando. */
+        /** Pose with the heading pinned by the gyro. Far more stable while turning. */
         MEGATAG_2
     }
 
-    /** Sigma de rumbo que le dice al estimator "ignora esta componente". */
+    /** The heading sigma that tells the estimator "ignore this component". */
     public static final double IGNORE_HEADING_STD_DEV = 9_999_999.0;
 
     private final Mode mode;
@@ -64,10 +63,10 @@ public class LimelightPoseSource extends PoseSource {
     private String detail = "";
 
     /**
-     * Crea una fuente de MegaTag1 con la configuracion recomendada para AprilTags.
+     * Creates a MegaTag1 source with the recommended configuration for AprilTags.
      *
-     * @param name nombre de la tabla del Limelight, por ejemplo {@code "limelight-front"}.
-     * @return la fuente.
+     * @param name the Limelight's table name, for example {@code "limelight-front"}.
+     * @return the source.
      */
     public static LimelightPoseSource megaTag1(String name) {
         return new LimelightPoseSource(name, Mode.MEGATAG_1, PoseSourceConfig.forAprilTags())
@@ -75,14 +74,14 @@ public class LimelightPoseSource extends PoseSource {
     }
 
     /**
-     * Crea una fuente de MegaTag2 con la configuracion recomendada.
+     * Creates a MegaTag2 source with the recommended configuration.
      *
-     * <p>Sin filtro de velocidad angular --- MegaTag2 aguanta girar, que es justo su razon de ser ---
-     * y con la sigma de rumbo saturada para que el estimator no se crea un rumbo que el mismo
-     * proporciono.
+     * <p>No angular velocity filter --- MegaTag2 copes with turning, which is exactly its reason for
+     * existing --- and with the heading sigma saturated so the estimator does not believe a heading it
+     * supplied itself.
      *
-     * @param name nombre de la tabla del Limelight.
-     * @return la fuente.
+     * @param name the Limelight's table name.
+     * @return the source.
      */
     public static LimelightPoseSource megaTag2(String name) {
         return new LimelightPoseSource(
@@ -97,23 +96,23 @@ public class LimelightPoseSource extends PoseSource {
     }
 
     /**
-     * Crea una fuente sobre la instancia global de NetworkTables.
+     * Creates a source on the global NetworkTables instance.
      *
-     * @param name   nombre de la tabla del Limelight.
-     * @param mode   que solucion consumir.
-     * @param config umbrales de los filtros.
+     * @param name   the Limelight's table name.
+     * @param mode   which solution to consume.
+     * @param config filter thresholds.
      */
     public LimelightPoseSource(String name, Mode mode, PoseSourceConfig config) {
         this(name, mode, config, NetworkTableInstance.getDefault());
     }
 
     /**
-     * Crea una fuente sobre una instancia concreta de NetworkTables.
+     * Creates a source on a specific NetworkTables instance.
      *
-     * @param name     nombre de la tabla del Limelight.
-     * @param mode     que solucion consumir.
-     * @param config   umbrales de los filtros.
-     * @param instance instancia de NetworkTables.
+     * @param name     the Limelight's table name.
+     * @param mode     which solution to consume.
+     * @param config   filter thresholds.
+     * @param instance the NetworkTables instance.
      */
     public LimelightPoseSource(
             String name, Mode mode, PoseSourceConfig config, NetworkTableInstance instance) {
@@ -122,17 +121,17 @@ public class LimelightPoseSource extends PoseSource {
         this.table = instance.getTable(name);
 
         String key = mode == Mode.MEGATAG_2 ? "botpose_orb_wpiblue" : "botpose_wpiblue";
-        // Una entry y no getEntry().getDoubleArray(): hace falta el timestamp atomico del valor para
-        // fechar la captura, y eso solo lo da getAtomic().
+        // An entry rather than getEntry().getDoubleArray(): the value's atomic timestamp is needed
+        // to date the capture, and only getAtomic() provides it.
         this.botposeEntry = table.getDoubleArrayTopic(key).getEntry(new double[0]);
         this.orientationPublisher = table.getDoubleArrayTopic("robot_orientation_set").publish();
     }
 
     /**
-     * Margen alrededor del campo dentro del cual una pose sigue considerandose valida.
+     * Margin around the field within which a pose still counts as valid.
      *
-     * @param meters margen en metros.
-     * @return esta misma fuente.
+     * @param meters margin in metres.
+     * @return this same source.
      */
     public LimelightPoseSource withFieldMargin(double meters) {
         this.fieldMarginMeters = meters;
@@ -140,11 +139,11 @@ public class LimelightPoseSource extends PoseSource {
     }
 
     /**
-     * Controla si la fuente le escribe el rumbo al Limelight. Apagalo solo si ya lo hace otra parte
-     * de tu codigo; sin el, MegaTag2 no produce nada.
+     * Controls whether the source writes the heading to the Limelight. Switch it off only if another
+     * part of your code already does; without it, MegaTag2 produces nothing.
      *
-     * @param enabled true para escribirlo.
-     * @return esta misma fuente.
+     * @param enabled true to write it.
+     * @return this same source.
      */
     public LimelightPoseSource withOrientationPublishing(boolean enabled) {
         this.publishOrientation = enabled;
@@ -152,10 +151,10 @@ public class LimelightPoseSource extends PoseSource {
     }
 
     /**
-     * Pone una estrategia de desviaciones y devuelve el tipo concreto, para poder encadenar.
+     * Installs a deviation strategy and returns the concrete type, so calls can be chained.
      *
-     * @param strategy estrategia de {@link StdDevStrategies}.
-     * @return esta misma fuente.
+     * @param strategy a strategy from {@link StdDevStrategies}.
+     * @return this same source.
      */
     public LimelightPoseSource withStdDevsStrategy(
             BiFunction<Double, Integer, Matrix<N3, N1>> strategy) {
@@ -163,12 +162,12 @@ public class LimelightPoseSource extends PoseSource {
         return this;
     }
 
-    /** @return el modo de esta fuente. */
+    /** @return this source's mode. */
     public Mode getMode() {
         return mode;
     }
 
-    /** @return la tabla de NetworkTables que se esta leyendo. */
+    /** @return the NetworkTables table being read. */
     public NetworkTable getTable() {
         return table;
     }
@@ -188,30 +187,30 @@ public class LimelightPoseSource extends PoseSource {
         if (parsed.isEmpty() || !parsed.get().hasTargets()) {
             detail =
                     mode == Mode.MEGATAG_2 && inputs.heading().isEmpty()
-                            ? "MegaTag2 sin datos: nadie le esta dando el rumbo del robot"
-                            : "sin tags a la vista";
+                            ? "MegaTag2 has no data: nobody is feeding it the robot heading"
+                            : "no tags in sight";
             return Optional.empty();
         }
 
         LimelightBotpose.Estimate estimate = parsed.get();
 
-        // La ambiguedad solo significa algo con UN tag a la vista. Con dos o mas, la solucion sale
-        // de un PnP multi-tag que esta geometricamente restringido, y la ambiguedad que Limelight
-        // reporta por tag es la del solve individual de cada uno --- justo lo que el multi-tag
-        // resuelve. Aplicar el filtro ahi descarta las mejores mediciones que hay: contra la
-        // simulacion, tres tags a doce metros daban ambiguedades de 0.97 por tag y el gate se
-        // comia el 100% de los frames.
+        // Ambiguity only means something with ONE tag in sight. With two or more, the solution comes
+        // from a multi-tag PnP that is geometrically constrained, and the per-tag ambiguity Limelight
+        // reports is that of each tag's individual solve --- exactly what the multi-tag solve
+        // resolves. Applying the filter there discards the best measurements available: against the
+        // simulation, three tags at twelve metres gave per-tag ambiguities of 0.97 and the gate ate
+        // 100% of the frames.
         lastAmbiguity =
                 estimate.tagCount() == 1 ? estimate.worstAmbiguity() : OptionalDouble.empty();
 
         detail =
                 String.format(
-                        "%d tag(s) a %.1f m%s",
+                        "%d tag(s) at %.1f m%s",
                         estimate.tagCount(),
                         estimate.avgTagDistMeters(),
                         lastAmbiguity.isPresent()
-                                ? String.format(", ambiguedad %.2f", lastAmbiguity.getAsDouble())
-                                : " (multi-tag, sin filtro de ambiguedad)");
+                                ? String.format(", ambiguity %.2f", lastAmbiguity.getAsDouble())
+                                : " (multi-tag, no ambiguity filter)");
 
         return Optional.of(
                 new PoseSample(
@@ -226,10 +225,10 @@ public class LimelightPoseSource extends PoseSource {
     }
 
     /**
-     * Le escribe al Limelight el rumbo del robot, que es lo que MegaTag2 necesita para resolver.
+     * Writes the robot heading to the Limelight, which is what MegaTag2 needs in order to solve.
      *
-     * <p>Solo se rellena el yaw. Los otros cinco valores existen en el protocolo pero el propio
-     * Limelight los documenta como innecesarios.
+     * <p>Only the yaw is filled in. The other five values exist in the protocol but Limelight itself
+     * documents them as unnecessary.
      */
     private void pushRobotOrientation() {
         inputs.heading()

@@ -9,10 +9,10 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import org.photonvision.simulation.SimCameraProperties;
 
 /**
- * Configuracion de una {@link SimulatedLimelight}: todo lo que en un prototipo iria
- * hardcodeado (nombre de tabla NT, optica de la camara, que keys publicar) vive aqui.
+ * Configuration for a {@link SimulatedLimelight}: everything a prototype would hardcode
+ * (NT table name, camera optics, which keys to publish) lives here.
  *
- * <p>Los setters son fluidos y devuelven {@code this}, asi que se encadenan:
+ * <p>The setters are fluent and return {@code this}, so they chain:
  *
  * <pre>{@code
  * var config = LimelightSimConfig.limelight3G()
@@ -20,26 +20,26 @@ import org.photonvision.simulation.SimCameraProperties;
  *         .withMegaTag2(true);
  * }</pre>
  *
- * <p>Los presets de camara parten de las especificaciones publicadas por Limelight y
- * son aproximaciones razonables, no calibraciones reales. Si tienes la calibracion de
- * tu camara, pasala con {@link #withCameraProperties(SimCameraProperties)}.
+ * <p>The camera presets start from Limelight's published specifications and are
+ * reasonable approximations, not real calibrations. If you have your camera's
+ * calibration, pass it with {@link #withCameraProperties(SimCameraProperties)}.
  */
 public class LimelightSimConfig {
 
     /**
-     * Cada uno de los origenes en los que un Limelight publica la pose del robot.
+     * Each of the origins a Limelight publishes the robot pose in.
      *
-     * <p>Un Limelight real publica los tres, y con MegaTag2 son seis arrays en total. Cada array son
-     * {@code 11 + 7 * tags} doubles: con tres tags visibles, medidos contra una simulacion viva, los
-     * seis suman <b>0.19 Mbps</b> de NetworkTables a 10 Hz de suscripcion --- y casi todo el mundo
-     * lee uno solo.
+     * <p>A real Limelight publishes all three, and with MegaTag2 that is six arrays in total. Each
+     * array is {@code 11 + 7 * tags} doubles: with three tags visible, measured against a live
+     * simulation, the six add up to <b>0.19 Mbps</b> of NetworkTables at a 10 Hz subscription --- and
+     * almost everybody reads just one.
      */
     public enum BotposeVariant {
-        /** {@code botpose}: origen legacy en el centro del campo. */
+        /** {@code botpose}: legacy origin at the centre of the field. */
         LEGACY_CENTER,
-        /** {@code botpose_wpiblue}: origen en la esquina azul. Es el que usa casi todo el mundo. */
+        /** {@code botpose_wpiblue}: origin at the blue corner. This is the one almost everybody uses. */
         WPI_BLUE,
-        /** {@code botpose_wpired}: origen en la esquina roja. */
+        /** {@code botpose_wpired}: origin at the red corner. */
         WPI_RED
     }
 
@@ -72,42 +72,42 @@ public class LimelightSimConfig {
 
     private double megaTag2HeadingScaleFactor = 0.02;
 
-    /** Crea una configuracion con los valores por defecto (perfil Limelight 3G). */
+    /** Creates a configuration with the default values (Limelight 3G profile). */
     public LimelightSimConfig() {}
 
     /**
-     * Preset aproximado de un Limelight 2/2+ a 1280x720, tomado directamente de los
-     * presets que trae photonlib.
+     * Approximate preset for a Limelight 2/2+ at 1280x720, taken straight from the
+     * presets photonlib ships.
      *
-     * @return una configuracion nueva con ese perfil de camara.
+     * @return a new configuration with that camera profile.
      */
     public static LimelightSimConfig limelight2() {
         return new LimelightSimConfig().withCameraProperties(SimCameraProperties.LL2_1280_720());
     }
 
     /**
-     * Preset aproximado de un Limelight 3: 1280x800, FOV diagonal ~75 grados, 90 FPS.
+     * Approximate preset for a Limelight 3: 1280x800, ~75 degree diagonal FOV, 90 FPS.
      *
-     * @return una configuracion nueva con ese perfil de camara.
+     * @return a new configuration with that camera profile.
      */
     public static LimelightSimConfig limelight3() {
         return new LimelightSimConfig().withCameraProperties(limelight3Properties());
     }
 
     /**
-     * Preset aproximado de un Limelight 3G: misma resolucion que el 3 pero optica mas
-     * ancha, FOV diagonal ~91 grados.
+     * Approximate preset for a Limelight 3G: same resolution as the 3 but wider optics,
+     * ~91 degree diagonal FOV.
      *
-     * @return una configuracion nueva con ese perfil de camara.
+     * @return a new configuration with that camera profile.
      */
     public static LimelightSimConfig limelight3G() {
         return new LimelightSimConfig().withCameraProperties(limelight3GProperties());
     }
 
     /**
-     * Preset aproximado de un Limelight 4: optica del 3G con mas FPS y menos latencia.
+     * Approximate preset for a Limelight 4: the 3G's optics with more FPS and less latency.
      *
-     * @return una configuracion nueva con ese perfil de camara.
+     * @return a new configuration with that camera profile.
      */
     public static LimelightSimConfig limelight4() {
         SimCameraProperties props = limelight3GProperties();
@@ -138,11 +138,11 @@ public class LimelightSimConfig {
     }
 
     /**
-     * Nombre de la tabla de NetworkTables donde se publican las keys. Tiene que ser el
-     * mismo string que el robot code le pasa a {@code LimelightHelpers}.
+     * Name of the NetworkTables table the keys are published to. It has to be the same
+     * string the robot code passes to {@code LimelightHelpers}.
      *
-     * @param name nombre de la tabla, por ejemplo {@code "limelight-front"}.
-     * @return esta misma configuracion.
+     * @param name table name, for example {@code "limelight-front"}.
+     * @return this same configuration.
      */
     public LimelightSimConfig withTableName(String name) {
         this.tableName = (name == null || name.isBlank()) ? "limelight" : name;
@@ -150,11 +150,11 @@ public class LimelightSimConfig {
     }
 
     /**
-     * Nombre del mundo simulado compartido. Varias camaras con el mismo nombre comparten
-     * un unico {@code VisionSystemSim}, que es lo que quieres para multi-camara.
+     * Name of the shared simulated world. Several cameras with the same name share a
+     * single {@code VisionSystemSim}, which is what you want for multi-camera setups.
      *
-     * @param name identificador del mundo.
-     * @return esta misma configuracion.
+     * @param name world identifier.
+     * @return this same configuration.
      */
     public LimelightSimConfig withVisionWorld(String name) {
         this.visionWorldName = name;
@@ -162,10 +162,10 @@ public class LimelightSimConfig {
     }
 
     /**
-     * Layout de AprilTags contra el que se simulan las detecciones y se estiman poses.
+     * The AprilTag layout detections are simulated and poses estimated against.
      *
-     * @param layout layout del campo.
-     * @return esta misma configuracion.
+     * @param layout the field layout.
+     * @return this same configuration.
      */
     public LimelightSimConfig withFieldLayout(AprilTagFieldLayout layout) {
         this.fieldLayout = layout;
@@ -173,10 +173,10 @@ public class LimelightSimConfig {
     }
 
     /**
-     * Propiedades opticas y de temporizado de la camara simulada.
+     * Optical and timing properties of the simulated camera.
      *
-     * @param properties propiedades de photonlib.
-     * @return esta misma configuracion.
+     * @param properties photonlib properties.
+     * @return this same configuration.
      */
     public LimelightSimConfig withCameraProperties(SimCameraProperties properties) {
         this.cameraProperties = properties;
@@ -184,11 +184,11 @@ public class LimelightSimConfig {
     }
 
     /**
-     * Controla si se registra un {@code SimDevice} de HAL para que la camara aparezca en
-     * el panel "Other Devices" del Sim GUI.
+     * Controls whether a HAL {@code SimDevice} is registered so the camera shows up in the
+     * Sim GUI's "Other Devices" panel.
      *
-     * @param enabled true para registrarlo.
-     * @return esta misma configuracion.
+     * @param enabled true to register it.
+     * @return this same configuration.
      */
     public LimelightSimConfig withSimDevice(boolean enabled) {
         this.createSimDevice = enabled;
@@ -196,11 +196,11 @@ public class LimelightSimConfig {
     }
 
     /**
-     * Controla la publicacion de {@code botpose}, {@code botpose_wpiblue} y
+     * Controls publication of {@code botpose}, {@code botpose_wpiblue} and
      * {@code botpose_wpired}.
      *
-     * @param enabled true para publicarlas.
-     * @return esta misma configuracion.
+     * @param enabled true to publish them.
+     * @return this same configuration.
      */
     public LimelightSimConfig withBotpose(boolean enabled) {
         this.publishBotpose = enabled;
@@ -208,12 +208,12 @@ public class LimelightSimConfig {
     }
 
     /**
-     * Controla la publicacion de las keys {@code botpose_orb*} (equivalente a MegaTag2).
-     * Requiere que el robot code llame a {@code LimelightHelpers.SetRobotOrientation}
-     * cada ciclo; si no, esas keys se quedan vacias, igual que con hardware real.
+     * Controls publication of the {@code botpose_orb*} keys (the MegaTag2 equivalent). It
+     * requires the robot code to call {@code LimelightHelpers.SetRobotOrientation} every
+     * cycle; otherwise those keys stay empty, exactly as with real hardware.
      *
-     * @param enabled true para publicarlas.
-     * @return esta misma configuracion.
+     * @param enabled true to publish them.
+     * @return this same configuration.
      */
     public LimelightSimConfig withMegaTag2(boolean enabled) {
         this.publishMegaTag2 = enabled;
@@ -221,10 +221,10 @@ public class LimelightSimConfig {
     }
 
     /**
-     * Controla la publicacion de la key {@code rawfiducials}.
+     * Controls publication of the {@code rawfiducials} key.
      *
-     * @param enabled true para publicarla.
-     * @return esta misma configuracion.
+     * @param enabled true to publish it.
+     * @return this same configuration.
      */
     public LimelightSimConfig withRawFiducials(boolean enabled) {
         this.publishRawFiducials = enabled;
@@ -232,11 +232,11 @@ public class LimelightSimConfig {
     }
 
     /**
-     * Controla la publicacion de {@code tcornxy}. Apagado por defecto porque es el array
-     * mas pesado y casi nadie lo usa.
+     * Controls publication of {@code tcornxy}. Off by default because it is the heaviest
+     * array and almost nobody uses it.
      *
-     * @param enabled true para publicarla.
-     * @return esta misma configuracion.
+     * @param enabled true to publish it.
+     * @return this same configuration.
      */
     public LimelightSimConfig withCorners(boolean enabled) {
         this.publishCorners = enabled;
@@ -244,18 +244,17 @@ public class LimelightSimConfig {
     }
 
     /**
-     * Controla la publicacion de {@code targetpose_cameraspace},
-     * {@code targetpose_robotspace}, {@code camerapose_targetspace} y
+     * Controls publication of {@code targetpose_cameraspace},
+     * {@code targetpose_robotspace}, {@code camerapose_targetspace} and
      * {@code botpose_targetspace}.
      *
-     * <p>Apagado por defecto a proposito: la convencion de ejes de target space de
-     * Limelight (X derecha, Y abajo, Z saliendo) es la parte del esquema mas facil de
-     * interpretar mal, y es preferible que estas keys se queden vacias de forma obvia a
-     * que publiquen numeros plausibles pero equivocados. Si las enciendes, valida los
-     * signos contra tu hardware real antes de confiar en ellas.
+     * <p>Off by default on purpose: Limelight's target-space axis convention (X right, Y
+     * down, Z outward) is the part of the schema easiest to misread, and these keys staying
+     * obviously empty is preferable to them publishing plausible but wrong numbers. If you
+     * switch them on, validate the signs against your real hardware before trusting them.
      *
-     * @param enabled true para publicarlas.
-     * @return esta misma configuracion.
+     * @param enabled true to publish them.
+     * @return this same configuration.
      */
     public LimelightSimConfig withTargetSpacePoses(boolean enabled) {
         this.publishTargetSpacePoses = enabled;
@@ -263,23 +262,23 @@ public class LimelightSimConfig {
     }
 
     /**
-     * Distancia mas alla de la cual la camara simulada deja de ver un tag.
+     * Distance beyond which the simulated camera stops seeing a tag.
      *
-     * <p><b>Esto no es afinado fino, es lo que separa una camara de un rayo X.</b> Photonlib no
-     * limita el alcance por defecto, y {@code VisionSystemSim} no modela oclusion: sin un limite, la
-     * camara ve todos los tags dentro de su FOV por lejos que esten y a traves de las paredes del
-     * campo.
+     * <p><b>This is not fine tuning, it is what separates a camera from an X-ray.</b> Photonlib does
+     * not limit the range by default, and {@code VisionSystemSim} does not model occlusion: without a
+     * limit, the camera sees every tag inside its FOV however far away it is, straight through the
+     * field walls.
      *
-     * <p>Medido contra el campo 2026 con el robot a (2.7, 2.6): sin limite entraban siete tags,
-     * cinco de ellos entre 8 y 13 m con ambiguedades de 0.6 a 0.99, y el PnP multi-tag los mezclaba
-     * con los dos cercanos buenos y devolvia una pose a doce metros del robot y a metro y medio de
-     * altura.
+     * <p>Measured against the 2026 field with the robot at (2.7, 2.6): with no limit, seven tags came
+     * in, five of them between 8 and 13 m with ambiguities from 0.6 to 0.99, and the multi-tag PnP
+     * mixed them with the two good nearby ones and returned a pose twelve metres from the robot and a
+     * metre and a half off the ground.
      *
-     * <p>El default de 7 m es lo que un Limelight 3G resuelve de forma fiable sobre un tag de
-     * 16.5 cm. Si mides el tuyo, pon el numero medido.
+     * <p>The 7 m default is what a Limelight 3G reliably resolves on a 16.5 cm tag. If you measure
+     * yours, use the number you measured.
      *
-     * @param meters alcance maximo en metros.
-     * @return esta misma configuracion.
+     * @param meters maximum range in metres.
+     * @return this same configuration.
      */
     public LimelightSimConfig withMaxSightRange(double meters) {
         this.maxSightRangeMeters = meters;
@@ -287,14 +286,14 @@ public class LimelightSimConfig {
     }
 
     /**
-     * Area minima en pixeles para que un tag cuente como detectado.
+     * Minimum area in pixels for a tag to count as detected.
      *
-     * <p>Es el otro freno contra los tags imposibles: uno a mucha distancia ocupa unos pocos pixeles
-     * y ningun detector real lo saca. Photonlib usa 100 por defecto; aqui son 200, que a 1280x800
-     * corresponde aproximadamente al limite util de un tag de 16.5 cm.
+     * <p>It is the other brake against impossible tags: one far away covers a handful of pixels and no
+     * real detector picks it out. Photonlib uses 100 by default; here it is 200, which at 1280x800
+     * corresponds roughly to the useful limit of a 16.5 cm tag.
      *
-     * @param pixels area minima en pixeles.
-     * @return esta misma configuracion.
+     * @param pixels minimum area in pixels.
+     * @return this same configuration.
      */
     public LimelightSimConfig withMinTargetAreaPixels(double pixels) {
         this.minTargetAreaPixels = pixels;
@@ -302,16 +301,16 @@ public class LimelightSimConfig {
     }
 
     /**
-     * Elige en que origenes publicar la pose del robot.
+     * Chooses which origins the robot pose is published in.
      *
-     * <p>Por defecto se publican los tres, que es lo que hace un Limelight real. Si tu robot code
-     * solo lee uno --- lo normal --- dejar solo ese recorta dos tercios del ancho de banda que gasta
-     * esta camara en NetworkTables.
+     * <p>All three are published by default, which is what a real Limelight does. If your robot code
+     * only reads one --- the normal case --- keeping just that one cuts two thirds of the NetworkTables
+     * bandwidth this camera spends.
      *
      * <pre>{@code config.withBotposeVariants(BotposeVariant.WPI_BLUE);}</pre>
      *
-     * @param variants origenes a publicar; sin argumentos no se publica ninguno.
-     * @return esta misma configuracion.
+     * @param variants the origins to publish; with no arguments, none are published.
+     * @return this same configuration.
      */
     public LimelightSimConfig withBotposeVariants(BotposeVariant... variants) {
         this.botposeVariants =
@@ -322,14 +321,14 @@ public class LimelightSimConfig {
     }
 
     /**
-     * Publica por {@code CameraServer} el stream MJPEG crudo que renderiza photonlib: los AprilTags
-     * vistos desde la camara, en <code>&lt;nombre&gt;-raw</code>. Se ve en Glass, Shuffleboard o
+     * Publishes, over {@code CameraServer}, the raw MJPEG stream photonlib renders: the AprilTags as
+     * seen from the camera, at <code>&lt;name&gt;-raw</code>. It shows up in Glass, Shuffleboard or
      * AdvantageScope.
      *
-     * <p>Apagado por defecto porque renderiza con OpenCV en cada frame y cuesta CPU de verdad.
+     * <p>Off by default because it renders with OpenCV on every frame and costs real CPU.
      *
-     * @param enabled true para publicarlo.
-     * @return esta misma configuracion.
+     * @param enabled true to publish it.
+     * @return this same configuration.
      */
     public LimelightSimConfig withRawStream(boolean enabled) {
         this.rawStream = enabled;
@@ -337,13 +336,13 @@ public class LimelightSimConfig {
     }
 
     /**
-     * Dibuja el wireframe del campo en el stream crudo. Ayuda mucho a entender hacia donde esta
-     * mirando la camara cuando no hay ningun tag a la vista.
+     * Draws the field wireframe on the raw stream. It helps a lot to understand where the camera is
+     * looking when there is no tag in sight.
      *
-     * <p>Requiere {@link #withRawStream(boolean)}.
+     * <p>Requires {@link #withRawStream(boolean)}.
      *
-     * @param enabled true para dibujarlo.
-     * @return esta misma configuracion.
+     * @param enabled true to draw it.
+     * @return this same configuration.
      */
     public LimelightSimConfig withWireframe(boolean enabled) {
         this.wireframe = enabled;
@@ -351,11 +350,11 @@ public class LimelightSimConfig {
     }
 
     /**
-     * Publica tambien el stream anotado, con el crosshair y los contornos de los targets detectados,
-     * en <code>&lt;nombre&gt;-processed</code>.
+     * Also publishes the annotated stream, with the crosshair and the outlines of the detected
+     * targets, at <code>&lt;name&gt;-processed</code>.
      *
-     * @param enabled true para publicarlo.
-     * @return esta misma configuracion.
+     * @param enabled true to publish it.
+     * @return this same configuration.
      */
     public LimelightSimConfig withProcessedStream(boolean enabled) {
         this.processedStream = enabled;
@@ -363,11 +362,11 @@ public class LimelightSimConfig {
     }
 
     /**
-     * Publica en {@code SmartDashboard} el {@code Field2d} de depuracion que mantiene photonlib, con
-     * la pose del robot, la de las camaras y la de los targets visibles.
+     * Publishes to {@code SmartDashboard} the debug {@code Field2d} photonlib maintains, with the
+     * robot pose, the camera poses and the poses of the visible targets.
      *
-     * @param enabled true para publicarlo.
-     * @return esta misma configuracion.
+     * @param enabled true to publish it.
+     * @return this same configuration.
      */
     public LimelightSimConfig withDebugField(boolean enabled) {
         this.publishDebugField = enabled;
@@ -375,11 +374,11 @@ public class LimelightSimConfig {
     }
 
     /**
-     * Controla si la simulacion respeta {@code camerapose_robotspace_set}, es decir, si
-     * el robot code puede mover la camara en caliente como en un Limelight real.
+     * Controls whether the simulation honours {@code camerapose_robotspace_set}, that is,
+     * whether the robot code can move the camera on the fly as on a real Limelight.
      *
-     * @param enabled true para respetarlo.
-     * @return esta misma configuracion.
+     * @param enabled true to honour it.
+     * @return this same configuration.
      */
     public LimelightSimConfig withCameraPoseOverride(boolean enabled) {
         this.honorCameraPoseOverride = enabled;
@@ -387,10 +386,10 @@ public class LimelightSimConfig {
     }
 
     /**
-     * Controla si la simulacion respeta {@code fiducial_id_filters_set} al estimar poses.
+     * Controls whether the simulation honours {@code fiducial_id_filters_set} when estimating poses.
      *
-     * @param enabled true para respetarlo.
-     * @return esta misma configuracion.
+     * @param enabled true to honour it.
+     * @return this same configuration.
      */
     public LimelightSimConfig withFiducialFilters(boolean enabled) {
         this.honorFiducialFilters = enabled;
@@ -398,10 +397,10 @@ public class LimelightSimConfig {
     }
 
     /**
-     * Controla si la simulacion respeta {@code throttle_set} saltandose frames.
+     * Controls whether the simulation honours {@code throttle_set} by skipping frames.
      *
-     * @param enabled true para respetarlo.
-     * @return esta misma configuracion.
+     * @param enabled true to honour it.
+     * @return this same configuration.
      */
     public LimelightSimConfig withThrottle(boolean enabled) {
         this.honorThrottle = enabled;
@@ -409,123 +408,123 @@ public class LimelightSimConfig {
     }
 
     /**
-     * Peso del heading en el solver de MegaTag2. Valores mas altos penalizan mas
-     * desviarse del yaw que reporto el robot code.
+     * Weight of the heading in the MegaTag2 solver. Higher values penalise straying from
+     * the yaw the robot code reported more heavily.
      *
-     * @param factor factor de escala, por defecto 0.02.
-     * @return esta misma configuracion.
+     * @param factor scale factor, 0.02 by default.
+     * @return this same configuration.
      */
     public LimelightSimConfig withMegaTag2HeadingScaleFactor(double factor) {
         this.megaTag2HeadingScaleFactor = factor;
         return this;
     }
 
-    /** @return el nombre de la tabla NT configurada. */
+    /** @return the configured NT table name. */
     public String tableName() {
         return tableName;
     }
 
-    /** @return el nombre del mundo simulado compartido. */
+    /** @return the name of the shared simulated world. */
     public String visionWorldName() {
         return visionWorldName;
     }
 
-    /** @return el layout de AprilTags configurado. */
+    /** @return the configured AprilTag layout. */
     public AprilTagFieldLayout fieldLayout() {
         return fieldLayout;
     }
 
-    /** @return las propiedades de la camara simulada. */
+    /** @return the simulated camera's properties. */
     public SimCameraProperties cameraProperties() {
         return cameraProperties;
     }
 
-    /** @return true si hay que registrar el SimDevice de HAL. */
+    /** @return true if the HAL SimDevice should be registered. */
     public boolean createSimDevice() {
         return createSimDevice;
     }
 
-    /** @return true si hay que publicar las keys de botpose. */
+    /** @return true if the botpose keys should be published. */
     public boolean publishBotpose() {
         return publishBotpose;
     }
 
-    /** @return true si hay que publicar las keys de MegaTag2. */
+    /** @return true if the MegaTag2 keys should be published. */
     public boolean publishMegaTag2() {
         return publishMegaTag2;
     }
 
-    /** @return true si hay que publicar rawfiducials. */
+    /** @return true if rawfiducials should be published. */
     public boolean publishRawFiducials() {
         return publishRawFiducials;
     }
 
-    /** @return true si hay que publicar tcornxy. */
+    /** @return true if tcornxy should be published. */
     public boolean publishCorners() {
         return publishCorners;
     }
 
-    /** @return true si hay que publicar las poses en target space. */
+    /** @return true if the target-space poses should be published. */
     public boolean publishTargetSpacePoses() {
         return publishTargetSpacePoses;
     }
 
-    /** @return alcance maximo de la camara en metros. */
+    /** @return the camera's maximum range in metres. */
     public double maxSightRangeMeters() {
         return maxSightRangeMeters;
     }
 
-    /** @return area minima en pixeles para detectar un tag. */
+    /** @return minimum area in pixels to detect a tag. */
     public double minTargetAreaPixels() {
         return minTargetAreaPixels;
     }
 
     /**
-     * Indica si hay que publicar un origen concreto.
+     * Says whether a specific origin should be published.
      *
-     * @param variant origen a comprobar.
-     * @return true si esta en la lista configurada.
+     * @param variant the origin to check.
+     * @return true if it is in the configured list.
      */
     public boolean publishesBotposeVariant(BotposeVariant variant) {
         return botposeVariants.contains(variant);
     }
 
-    /** @return true si hay que publicar el stream MJPEG crudo. */
+    /** @return true if the raw MJPEG stream should be published. */
     public boolean rawStream() {
         return rawStream;
     }
 
-    /** @return true si hay que dibujar el wireframe del campo. */
+    /** @return true if the field wireframe should be drawn. */
     public boolean wireframe() {
         return wireframe;
     }
 
-    /** @return true si hay que publicar el stream anotado. */
+    /** @return true if the annotated stream should be published. */
     public boolean processedStream() {
         return processedStream;
     }
 
-    /** @return true si hay que publicar el Field2d de depuracion. */
+    /** @return true if the debug Field2d should be published. */
     public boolean publishDebugField() {
         return publishDebugField;
     }
 
-    /** @return true si se respeta camerapose_robotspace_set. */
+    /** @return true if camerapose_robotspace_set is honoured. */
     public boolean honorCameraPoseOverride() {
         return honorCameraPoseOverride;
     }
 
-    /** @return true si se respeta fiducial_id_filters_set. */
+    /** @return true if fiducial_id_filters_set is honoured. */
     public boolean honorFiducialFilters() {
         return honorFiducialFilters;
     }
 
-    /** @return true si se respeta throttle_set. */
+    /** @return true if throttle_set is honoured. */
     public boolean honorThrottle() {
         return honorThrottle;
     }
 
-    /** @return el factor de escala del heading para MegaTag2. */
+    /** @return the heading scale factor for MegaTag2. */
     public double megaTag2HeadingScaleFactor() {
         return megaTag2HeadingScaleFactor;
     }

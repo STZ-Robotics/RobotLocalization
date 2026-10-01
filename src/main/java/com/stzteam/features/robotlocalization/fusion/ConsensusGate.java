@@ -9,68 +9,69 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Arbitra entre fuentes que se contradicen.
+ * Arbitrates between sources that contradict each other.
  *
- * <p>Una sola camara que reporte una pose absurda pasa cualquier filtro individual: es
- * geometricamente valida, la ambiguedad es baja y el robot esta quieto. Lo unico que la delata es
- * que <b>otra fuente dice algo distinto</b>. Eso es lo que mira esta clase.
+ * <p>A single camera reporting an absurd pose passes every individual filter: it is geometrically
+ * valid, the ambiguity is low and the robot is standing still. The only thing that gives it away is
+ * that <b>another source says something different</b>. That is what this class looks at.
  *
- * <h2>Compensacion de movimiento</h2>
- * Dos mediciones tomadas con {@code dt} de diferencia describen posiciones distintas si el robot se
- * movio en medio, y eso no es un desacuerdo. En vez de propagar una pose hacia la otra --- que
- * obligaria a saber si las {@code ChassisSpeeds} vienen en marco de robot o de campo --- se ensancha
- * la tolerancia por la distancia que el robot pudo recorrer en ese tiempo:
+ * <h2>Motion compensation</h2>
+ * Two measurements taken {@code dt} apart describe different positions if the robot moved in
+ * between, and that is not a disagreement. Instead of propagating one pose towards the other ---
+ * which would require knowing whether the {@code ChassisSpeeds} come in robot or field frame --- the
+ * tolerance is widened by the distance the robot could have covered in that time:
  *
- * <pre>{@code tolerancia_efectiva = tolerancia + velocidad * dt}</pre>
+ * <pre>{@code effective_tolerance = tolerance + speed * dt}</pre>
  *
- * Es conservador y no depende del marco de referencia. Sin esto, con la ventana por defecto de 0.1 s
- * y un robot a 4 m/s, dos fuentes perfectas discrepan 0.4 m --- comparable a la tolerancia entera ---
- * y el filtro empieza a descartar mediciones buenas justo cuando mas falta hacen.
+ * It is conservative and does not depend on the reference frame. Without this, with the default
+ * 0.1 s window and a robot at 4 m/s, two perfect sources differ by 0.4 m --- comparable to the whole
+ * tolerance --- and the filter starts discarding good measurements exactly when they are needed
+ * most.
  *
- * <h2>Voto por mayoria</h2>
- * Se cuenta, por cada candidato, con cuantos otros concuerda. Sobreviven los del conteo mas alto. Si
- * empatan, se descartan todos los que esten en disputa: un empate significa que la evidencia no
- * alcanza para elegir, y meterle al estimator una pose que otra fuente contradice es peor que no
- * meterle ninguna.
+ * <h2>Majority vote</h2>
+ * For each candidate, the number of others it agrees with is counted. The ones with the highest
+ * count survive. On a tie, everything in dispute is discarded: a tie means the evidence is not
+ * enough to choose, and feeding the estimator a pose another source contradicts is worse than
+ * feeding it none.
  */
 public class ConsensusGate {
 
-    /** Que hacer cuando dos fuentes se contradicen. */
+    /** What to do when two sources contradict each other. */
     public enum Mode {
         /**
-         * Descartar a las dos. Es lo prudente con dos fuentes, que es el caso normal: si no hay una
-         * tercera que desempate, no hay forma de saber cual miente.
+         * Discard both. This is the prudent choice with two sources, which is the normal case: with
+         * no third one to break the tie, there is no way to tell which is lying.
          */
         REJECT_BOTH,
 
         /**
-         * Quedarse con las mas respaldadas. Solo tiene sentido con tres fuentes o mas; con dos
-         * siempre hay empate y se comporta como {@link #REJECT_BOTH}.
+         * Keep the best-supported ones. This only makes sense with three or more sources; with two
+         * there is always a tie and it behaves like {@link #REJECT_BOTH}.
          */
         MAJORITY_VOTE
     }
 
     /**
-     * Un candidato a arbitrar.
+     * A candidate to arbitrate.
      *
-     * @param name             nombre de la fuente, para los mensajes.
-     * @param pose             pose propuesta.
-     * @param timestampSeconds instante de la captura.
+     * @param name             source name, for the messages.
+     * @param pose             the proposed pose.
+     * @param timestampSeconds the instant of capture.
      */
     public record Candidate(String name, Pose2d pose, double timestampSeconds) {}
 
     /**
-     * Resultado del arbitraje.
+     * The outcome of the arbitration.
      *
-     * @param rejected  indices de los candidatos descartados.
-     * @param conflicts descripcion de cada desacuerdo, para telemetria o avisos.
+     * @param rejected  indices of the discarded candidates.
+     * @param conflicts a description of each disagreement, for telemetry or warnings.
      */
     public record Result(Set<Integer> rejected, List<String> conflicts) {
 
-        /** Resultado sin descartes ni conflictos. */
+        /** A result with no discards and no conflicts. */
         static final Result CLEAN = new Result(Set.of(), List.of());
 
-        /** @return true si todas las fuentes concordaron. */
+        /** @return true if every source agreed. */
         public boolean isUnanimous() {
             return conflicts.isEmpty();
         }
@@ -82,10 +83,10 @@ public class ConsensusGate {
     private boolean motionCompensation = true;
 
     /**
-     * Que hacer ante un desacuerdo.
+     * What to do on a disagreement.
      *
-     * @param newMode modo de arbitraje.
-     * @return esta misma puerta.
+     * @param newMode arbitration mode.
+     * @return this same gate.
      */
     public ConsensusGate withMode(Mode newMode) {
         this.mode = newMode;
@@ -93,10 +94,10 @@ public class ConsensusGate {
     }
 
     /**
-     * Cuanto pueden separarse dos poses antes de considerarse contradictorias.
+     * How far apart two poses may be before they count as contradictory.
      *
-     * @param meters tolerancia en metros.
-     * @return esta misma puerta.
+     * @param meters tolerance in metres.
+     * @return this same gate.
      */
     public ConsensusGate withToleranceMeters(double meters) {
         this.toleranceMeters = meters;
@@ -104,11 +105,11 @@ public class ConsensusGate {
     }
 
     /**
-     * Separacion temporal maxima para que dos mediciones se comparen. Mas alla de esta ventana
-     * describen momentos distintos y no se contrastan.
+     * Maximum time separation for two measurements to be compared. Beyond this window they
+     * describe different moments and are not contrasted.
      *
-     * @param seconds ventana en segundos.
-     * @return esta misma puerta.
+     * @param seconds window in seconds.
+     * @return this same gate.
      */
     public ConsensusGate withTimeWindowSeconds(double seconds) {
         this.timeWindowSeconds = seconds;
@@ -116,38 +117,38 @@ public class ConsensusGate {
     }
 
     /**
-     * Controla si la tolerancia se ensancha con la velocidad del robot.
+     * Controls whether the tolerance widens with the robot's speed.
      *
-     * @param enabled true para compensar el movimiento.
-     * @return esta misma puerta.
+     * @param enabled true to compensate for motion.
+     * @return this same gate.
      */
     public ConsensusGate withMotionCompensation(boolean enabled) {
         this.motionCompensation = enabled;
         return this;
     }
 
-    /** @return el modo de arbitraje vigente. */
+    /** @return the arbitration mode in effect. */
     public Mode mode() {
         return mode;
     }
 
-    /** @return la tolerancia en metros. */
+    /** @return the tolerance in metres. */
     public double toleranceMeters() {
         return toleranceMeters;
     }
 
-    /** @return la ventana temporal en segundos. */
+    /** @return the time window in seconds. */
     public double timeWindowSeconds() {
         return timeWindowSeconds;
     }
 
     /**
-     * Arbitra entre los candidatos.
+     * Arbitrates between the candidates.
      *
-     * @param candidates            candidatos del ciclo, en cualquier orden.
-     * @param robotSpeedMetersPerSec velocidad del robot, para compensar el movimiento. Pasa 0 si no
-     *                               la tienes.
-     * @return que candidatos hay que descartar y por que.
+     * @param candidates            this cycle's candidates, in any order.
+     * @param robotSpeedMetersPerSec robot speed, to compensate for motion. Pass 0 if you do not have
+     *                               it.
+     * @return which candidates to discard, and why.
      */
     public Result evaluate(List<Candidate> candidates, double robotSpeedMetersPerSec) {
         int n = candidates.size();
@@ -166,7 +167,7 @@ public class ConsensusGate {
 
                 double dt = Math.abs(a.timestampSeconds() - b.timestampSeconds());
                 if (dt > timeWindowSeconds) {
-                    // Momentos distintos: no son comparables, ni para concordar ni para discrepar.
+                    // Different moments: not comparable, neither to agree nor to disagree.
                     continue;
                 }
 
@@ -184,7 +185,7 @@ public class ConsensusGate {
                     disputed.add(j);
                     conflicts.add(
                             String.format(
-                                    "%s vs %s: %.2f m (limite %.2f m)",
+                                    "%s vs %s: %.2f m (limit %.2f m)",
                                     a.name(), b.name(), distance, allowed));
                 }
             }
@@ -202,11 +203,11 @@ public class ConsensusGate {
     }
 
     /**
-     * Devuelve los candidatos en disputa que menos respaldo tienen.
+     * Returns the disputed candidates with the least support.
      *
-     * <p>El respaldo se cuenta sobre <b>todos</b> los candidatos, no solo sobre los que estan en
-     * disputa: a una fuente la corrobora cualquiera que concuerde con ella, este o no discutiendo
-     * con alguien mas.
+     * <p>Support is counted over <b>all</b> candidates, not only the disputed ones: a source is
+     * corroborated by anyone who agrees with it, whether or not that one is arguing with somebody
+     * else.
      */
     private static Set<Integer> majorityLosers(boolean[][] agrees, Set<Integer> disputed, int n) {
         int[] support = new int[n];
@@ -226,7 +227,7 @@ public class ConsensusGate {
         }
 
         if (best == worst) {
-            // Todos los que discuten tienen el mismo respaldo: no hay mayoria, se van todos.
+            // Everyone arguing has the same support: there is no majority, so all of them go.
             return new HashSet<>(disputed);
         }
 

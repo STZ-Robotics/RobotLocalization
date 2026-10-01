@@ -22,14 +22,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Una camara Limelight simulada: PhotonVision genera las detecciones y esta clase las
- * publica con el esquema de NetworkTables de un Limelight real.
+ * A simulated Limelight camera: PhotonVision generates the detections and this class publishes
+ * them using the NetworkTables schema of a real Limelight.
  *
- * <p>La idea es que el robot code de produccion no cambie ni una linea. Si tu subsistema
- * lee {@code LimelightHelpers.getTX("limelight-front")} contra hardware real, leera lo mismo
- * contra esta simulacion.
+ * <p>The idea is that production robot code does not change a single line. If your subsystem
+ * reads {@code LimelightHelpers.getTX("limelight-front")} against real hardware, it will read
+ * the same thing against this simulation.
  *
- * <h2>Uso</h2>
+ * <h2>Usage</h2>
  * <pre>{@code
  * public class Robot extends TimedRobot {
  *     private final SimulatedLimelight frontCamera =
@@ -47,17 +47,17 @@ import java.util.Map;
  * }
  * }</pre>
  *
- * <h2>En robot real</h2>
- * El constructor detecta {@code RobotBase.isReal()} y no crea nada: ni
- * {@code VisionSystemSim}, ni {@code SimDevice}, ni entries de NetworkTables.
- * {@link #periodic(Pose2d)} queda como un retorno inmediato, asi que puedes dejar la
- * instancia declarada sin coste en competencia.
+ * <h2>On a real robot</h2>
+ * The constructor detects {@code RobotBase.isReal()} and creates nothing: no
+ * {@code VisionSystemSim}, no {@code SimDevice}, no NetworkTables entries.
+ * {@link #periodic(Pose2d)} becomes an immediate return, so you can leave the instance
+ * declared at no cost during competition.
  *
- * <h2>Fuera de alcance por ahora</h2>
+ * <h2>Out of scope for now</h2>
  * <ul>
- *   <li>Key {@code json} / {@code LimelightHelpers.getLatestResults}.</li>
- *   <li>Pipelines de detector neuronal ({@code tclass}, {@code rawdetections}).</li>
- *   <li>Modelado de crosshair movible: {@code tx} y {@code txnc} salen iguales.</li>
+ *   <li>The {@code json} key / {@code LimelightHelpers.getLatestResults}.</li>
+ *   <li>Neural detector pipelines ({@code tclass}, {@code rawdetections}).</li>
+ *   <li>Modelling a movable crosshair: {@code tx} and {@code txnc} come out equal.</li>
  * </ul>
  */
 public class SimulatedLimelight implements AutoCloseable {
@@ -83,27 +83,27 @@ public class SimulatedLimelight implements AutoCloseable {
     private long frameCounter = 0;
 
     /**
-     * Crea una camara simulada con la configuracion por defecto (perfil Limelight 3G,
-     * campo por defecto de WPILib).
+     * Creates a simulated camera with the default configuration (Limelight 3G profile, the
+     * feature's default field).
      *
-     * @param name          nombre de la camara; se usa como tabla de NetworkTables y como
-     *                      nombre del dispositivo en el Sim GUI.
-     * @param robotToCamera transformada del origen del robot a la camara, en convencion
-     *                      WPILib (X adelante, Y izquierda, Z arriba).
+     * @param name          the camera's name; used as the NetworkTables table and as the
+     *                      device name in the Sim GUI.
+     * @param robotToCamera transform from the robot origin to the camera, in the WPILib
+     *                      convention (X forward, Y left, Z up).
      */
     public SimulatedLimelight(String name, Transform3d robotToCamera) {
         this(name, robotToCamera, new LimelightSimConfig());
     }
 
     /**
-     * Crea una camara simulada.
+     * Creates a simulated camera.
      *
-     * <p>El {@code name} manda: sobreescribe el {@code tableName} de la configuracion, para
-     * que el nombre que ves en el Sim GUI y el de la tabla NT no puedan divergir.
+     * <p>The {@code name} wins: it overwrites the configuration's {@code tableName}, so the name
+     * you see in the Sim GUI and the NT table's name cannot diverge.
      *
-     * @param name          nombre de la camara.
-     * @param robotToCamera transformada del origen del robot a la camara, en convencion WPILib.
-     * @param config        configuracion de optica, campo y keys a publicar.
+     * @param name          the camera's name.
+     * @param robotToCamera transform from the robot origin to the camera, in the WPILib convention.
+     * @param config        configuration of optics, field and keys to publish.
      */
     public SimulatedLimelight(String name, Transform3d robotToCamera, LimelightSimConfig config) {
         this.name = name;
@@ -125,25 +125,25 @@ public class SimulatedLimelight implements AutoCloseable {
 
         world = VisionSimWorld.get(config.visionWorldName(), config.fieldLayout());
         camera = new PhotonCamera(name);
-        // El layout va explicito. PhotonCameraSim guarda el suyo para resolver el PnP multi-tag, y
-        // el constructor de dos argumentos le mete AprilTagFields.kDefaultField --- que en WPILib
-        // 2026.1.1 es el campo de 2025. Con el mundo en 2026 eso significa detectar tags con una
-        // geometria y resolverlos contra otra: la pose sale a doce metros de donde esta el robot,
-        // sin ningun error por ningun lado.
+        // The layout is passed explicitly. PhotonCameraSim keeps its own to solve the multi-tag PnP,
+        // and the two-argument constructor hands it AprilTagFields.kDefaultField --- which on WPILib
+        // 2026.1.1 is the 2025 field. With the world on 2026 that means detecting tags with one
+        // geometry and solving them against another: the pose comes out twelve metres from where the
+        // robot is, with no error anywhere.
         cameraSim = new PhotonCameraSim(camera, config.cameraProperties(), config.fieldLayout());
         world.sim().addCamera(cameraSim, robotToCamera);
 
-        // Photonlib por defecto no limita el alcance, asi que la camara simulada ve cualquier tag
-        // dentro del FOV por lejos que este y a traves de lo que sea --- VisionSystemSim no modela
-        // oclusion. Medido contra el campo 2026: sin limite veia siete tags, cinco de ellos entre 8
-        // y 13 m con ambiguedades de 0.6 a 0.99, y el PnP multi-tag los mezclaba con los cercanos y
-        // aterrizaba a metro y medio de altura. Un Limelight de verdad no resuelve un tag de 16.5 cm
-        // a esa distancia.
+        // Photonlib does not limit the range by default, so the simulated camera sees any tag inside
+        // the FOV however far away and straight through anything --- VisionSystemSim does not model
+        // occlusion. Measured against the 2026 field: with no limit it saw seven tags, five of them
+        // between 8 and 13 m with ambiguities from 0.6 to 0.99, and the multi-tag PnP mixed them with
+        // the nearby ones and landed a metre and a half off the ground. A real Limelight does not
+        // resolve a 16.5 cm tag at that distance.
         cameraSim.setMaxSightRange(config.maxSightRangeMeters());
         cameraSim.setMinTargetAreaPixels(config.minTargetAreaPixels());
 
-        // El visor. Va apagado por defecto: renderizar con OpenCV en cada frame cuesta CPU de
-        // verdad, y la mayoria de las veces lo unico que hace falta son las keys de NT.
+        // The viewer. Off by default: rendering with OpenCV on every frame costs real CPU, and most
+        // of the time the only thing needed is the NT keys.
         cameraSim.enableRawStream(config.rawStream());
         cameraSim.enableDrawWireframe(config.wireframe());
         cameraSim.enableProcessedStream(config.processedStream());
@@ -172,19 +172,19 @@ public class SimulatedLimelight implements AutoCloseable {
     }
 
     /**
-     * Avanza todas las camaras simuladas creadas hasta ahora con la misma pose del robot.
-     * Atajo para el caso normal: una llamada en {@code simulationPeriodic()} y listo.
+     * Advances every simulated camera created so far with the same robot pose. A shortcut for the
+     * normal case: one call in {@code simulationPeriodic()} and done.
      *
-     * @param simulatedRobotPose pose simulada actual del robot.
+     * @param simulatedRobotPose the robot's current simulated pose.
      */
     public static void periodicAll(Pose2d simulatedRobotPose) {
         periodicAll(new Pose3d(simulatedRobotPose));
     }
 
     /**
-     * Avanza todas las camaras simuladas creadas hasta ahora con la misma pose del robot.
+     * Advances every simulated camera created so far with the same robot pose.
      *
-     * @param simulatedRobotPose pose simulada actual del robot.
+     * @param simulatedRobotPose the robot's current simulated pose.
      */
     public static void periodicAll(Pose3d simulatedRobotPose) {
         List<SimulatedLimelight> snapshot;
@@ -197,9 +197,9 @@ public class SimulatedLimelight implements AutoCloseable {
     }
 
     /**
-     * Devuelve las camaras simuladas activas.
+     * Returns the active simulated cameras.
      *
-     * @return una lista inmutable de instancias.
+     * @return an immutable list of instances.
      */
     public static List<SimulatedLimelight> instances() {
         synchronized (INSTANCES) {
@@ -208,19 +208,19 @@ public class SimulatedLimelight implements AutoCloseable {
     }
 
     /**
-     * Ciclo de la camara. Llamalo desde {@code simulationPeriodic()} con la pose que tu
-     * odometria o tu simulacion de chasis considera verdadera.
+     * The camera's cycle. Call it from {@code simulationPeriodic()} with the pose your odometry or
+     * your chassis simulation treats as the truth.
      *
-     * @param simulatedRobotPose pose simulada actual del robot.
+     * @param simulatedRobotPose the robot's current simulated pose.
      */
     public void periodic(Pose2d simulatedRobotPose) {
         periodic(new Pose3d(simulatedRobotPose));
     }
 
     /**
-     * Ciclo de la camara, con pose en 3D.
+     * The camera's cycle, with a 3D pose.
      *
-     * @param simulatedRobotPose pose simulada actual del robot.
+     * @param simulatedRobotPose the robot's current simulated pose.
      */
     public void periodic(Pose3d simulatedRobotPose) {
         if (!enabled) {
@@ -256,12 +256,12 @@ public class SimulatedLimelight implements AutoCloseable {
     }
 
     /**
-     * Devuelve el resultado mas reciente que sobrevive al throttle, o {@code null} si este
-     * ciclo no trajo ningun frame nuevo.
+     * Returns the most recent result that survives the throttle, or {@code null} if this cycle
+     * brought no new frame.
      *
-     * <p>Que no haya frame nuevo es lo normal: la camara corre a su propio FPS, no al del
-     * bucle del robot. En ese caso no se toca NetworkTables y los consumidores siguen viendo
-     * el ultimo frame publicado, igual que con hardware real.
+     * <p>Having no new frame is normal: the camera runs at its own FPS, not the robot loop's. In
+     * that case NetworkTables is not touched and consumers keep seeing the last published frame,
+     * exactly as with real hardware.
      */
     private PhotonPipelineResult latestAllowedResult(LimelightNTInputs inputs) {
         List<PhotonPipelineResult> results = camera.getAllUnreadResults();
@@ -284,7 +284,7 @@ public class SimulatedLimelight implements AutoCloseable {
         return kept;
     }
 
-    /** Aplica en caliente el {@code camerapose_robotspace_set} que escribio el robot code. */
+    /** Applies, on the fly, the {@code camerapose_robotspace_set} the robot code wrote. */
     private void applyCameraPoseOverride(LimelightNTInputs inputs) {
         inputs.cameraPoseOverride()
                 .filter(override -> !override.equals(robotToCamera))
@@ -292,10 +292,10 @@ public class SimulatedLimelight implements AutoCloseable {
     }
 
     /**
-     * Mueve la camara respecto al robot. Equivale a
-     * {@code LimelightHelpers.setCameraPose_RobotSpace}, pero desde codigo de simulacion.
+     * Moves the camera relative to the robot. Equivalent to
+     * {@code LimelightHelpers.setCameraPose_RobotSpace}, but from simulation code.
      *
-     * @param robotToCamera nueva transformada robot-&gt;camara.
+     * @param robotToCamera the new robot-&gt;camera transform.
      */
     public void setRobotToCamera(Transform3d robotToCamera) {
         this.robotToCamera = robotToCamera;
@@ -306,51 +306,51 @@ public class SimulatedLimelight implements AutoCloseable {
         world.sim().adjustCamera(cameraSim, robotToCamera);
     }
 
-    /** @return el nombre de la camara, que es tambien el de la tabla NT. */
+    /** @return the camera's name, which is also the NT table's. */
     public String name() {
         return name;
     }
 
-    /** @return true si la simulacion esta activa (es decir, no estamos en robot real). */
+    /** @return true if the simulation is active (that is, we are not on a real robot). */
     public boolean isEnabled() {
         return enabled;
     }
 
-    /** @return la transformada robot-&gt;camara vigente. */
+    /** @return the robot-&gt;camera transform in effect. */
     public Transform3d robotToCamera() {
         return robotToCamera;
     }
 
-    /** @return el ultimo frame traducido, util para telemetria o tests. */
+    /** @return the last translated frame, useful for telemetry or tests. */
     public LimelightFrame lastFrame() {
         return lastFrame;
     }
 
-    /** @return la configuracion con la que se creo esta camara. */
+    /** @return the configuration this camera was created with. */
     public LimelightSimConfig config() {
         return config;
     }
 
-    /** @return el mundo simulado compartido, o {@code null} en robot real. */
+    /** @return the shared simulated world, or {@code null} on a real robot. */
     public VisionSimWorld world() {
         return world;
     }
 
-    /** @return la {@code PhotonCamera} subyacente, o {@code null} en robot real. */
+    /** @return the underlying {@code PhotonCamera}, or {@code null} on a real robot. */
     public PhotonCamera camera() {
         return camera;
     }
 
-    /** @return la {@code PhotonCameraSim} subyacente, o {@code null} en robot real. */
+    /** @return the underlying {@code PhotonCameraSim}, or {@code null} on a real robot. */
     public PhotonCameraSim cameraSim() {
         return cameraSim;
     }
 
     /**
-     * Libera la camara y su {@code SimDevice}. En robot real no hay nada que liberar.
+     * Releases the camera and its {@code SimDevice}. On a real robot there is nothing to release.
      *
-     * <p>El mundo simulado compartido sobrevive: puede haber otras camaras usandolo. Para
-     * limpiarlo entero usa {@link VisionSimWorld#reset()}.
+     * <p>The shared simulated world survives: other cameras may still be using it. To wipe it
+     * entirely use {@link VisionSimWorld#reset()}.
      */
     @Override
     public void close() {
@@ -368,7 +368,7 @@ public class SimulatedLimelight implements AutoCloseable {
         camera.close();
     }
 
-    /** Cierra todas las camaras simuladas. Pensado para tests. */
+    /** Closes every simulated camera. Meant for tests. */
     public static void closeAll() {
         List<SimulatedLimelight> snapshot;
         synchronized (INSTANCES) {

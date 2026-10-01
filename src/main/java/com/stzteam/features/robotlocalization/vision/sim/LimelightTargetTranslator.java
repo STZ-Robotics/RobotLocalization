@@ -22,18 +22,18 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Traduce un {@code PhotonPipelineResult} al {@link LimelightFrame} equivalente.
+ * Translates a {@code PhotonPipelineResult} into the equivalent {@link LimelightFrame}.
  *
- * <p>Aqui vive toda la semantica: los cambios de signo entre convenciones, el calculo de
- * los metadatos que Limelight anexa a {@code botpose} (tag count, span, distancia y area
- * promedio) y las dos estimaciones de pose:
+ * <p>All the semantics live here: the sign changes between conventions, the computation of
+ * the metadata Limelight appends to {@code botpose} (tag count, span, average distance and
+ * area) and the two pose estimates:
  *
  * <ul>
- *   <li><b>MegaTag1</b> ({@code botpose*}): PnP multi-tag si hay dos o mas tags visibles,
- *       y si no el tag de menor ambiguedad. No usa ninguna informacion externa.</li>
- *   <li><b>MegaTag2</b> ({@code botpose_orb*}): PnP restringido fijando el yaw que el robot
- *       code escribio en {@code robot_orientation_set}. Si el robot no escribe esa key, esta
- *       estimacion no existe, exactamente igual que con hardware real.</li>
+ *   <li><b>MegaTag1</b> ({@code botpose*}): multi-tag PnP if two or more tags are visible,
+ *       and otherwise the least ambiguous tag. It uses no external information.</li>
+ *   <li><b>MegaTag2</b> ({@code botpose_orb*}): constrained PnP pinning the yaw the robot
+ *       code wrote to {@code robot_orientation_set}. If the robot does not write that key,
+ *       this estimate does not exist, exactly as with real hardware.</li>
  * </ul>
  */
 public class LimelightTargetTranslator {
@@ -47,11 +47,12 @@ public class LimelightTargetTranslator {
     private boolean constrainedSolverAvailable = true;
 
     /**
-     * Crea un traductor atado a un layout de campo y a una posicion de camara.
+     * Creates a translator bound to a field layout and a camera position.
      *
-     * @param layout             layout de AprilTags contra el que se estiman poses.
-     * @param robotToCamera      transformada del origen del robot a la camara, en convencion WPILib.
-     * @param headingScaleFactor peso del heading en el solver de MegaTag2.
+     * @param layout             the AprilTag layout poses are estimated against.
+     * @param robotToCamera      transform from the robot origin to the camera, in the WPILib
+     *                           convention.
+     * @param headingScaleFactor weight of the heading in the MegaTag2 solver.
      */
     public LimelightTargetTranslator(
             AprilTagFieldLayout layout, Transform3d robotToCamera, double headingScaleFactor) {
@@ -60,9 +61,9 @@ public class LimelightTargetTranslator {
         this.headingScaleFactor = headingScaleFactor;
         this.estimator = new PhotonPoseEstimator(layout, robotToCamera);
 
-        // El PnP restringido de MegaTag2 baja a OpenCV. El constructor de 2 argumentos no
-        // fuerza la carga de la nativa, asi que la pedimos aqui en vez de descubrir que falta
-        // a mitad de un ciclo.
+        // MegaTag2's constrained PnP drops down to OpenCV. The 2-argument constructor does not
+        // force the native library to load, so we ask for it here rather than discovering it is
+        // missing halfway through a cycle.
         try {
             OpenCvLoader.forceStaticLoad();
         } catch (UnsatisfiedLinkError | NoClassDefFoundError e) {
@@ -71,30 +72,30 @@ public class LimelightTargetTranslator {
     }
 
     /**
-     * Actualiza la posicion de la camara respecto al robot. Se llama cuando el robot code
-     * escribe {@code camerapose_robotspace_set}.
+     * Updates the camera's position relative to the robot. Called when the robot code writes
+     * {@code camerapose_robotspace_set}.
      *
-     * @param robotToCamera nueva transformada robot-&gt;camara.
+     * @param robotToCamera the new robot-&gt;camera transform.
      */
     public void setRobotToCamera(Transform3d robotToCamera) {
         this.robotToCamera = robotToCamera;
         estimator.setRobotToCameraTransform(robotToCamera);
     }
 
-    /** @return la transformada robot-&gt;camara vigente. */
+    /** @return the robot-&gt;camera transform in effect. */
     public Transform3d robotToCamera() {
         return robotToCamera;
     }
 
     /**
-     * Traduce un resultado de PhotonVision al frame equivalente de Limelight.
+     * Translates a PhotonVision result into the equivalent Limelight frame.
      *
-     * @param result       resultado recien leido de la camara simulada.
-     * @param inputs       lo que el robot code escribio en la tabla este ciclo.
-     * @param cameraMatrix intrinsecos de la camara, necesarios para MegaTag2.
-     * @param distCoeffs   coeficientes de distorsion, necesarios para MegaTag2.
-     * @param megaTag2     si hay que intentar la estimacion de MegaTag2.
-     * @return el frame traducido.
+     * @param result       the result just read from the simulated camera.
+     * @param inputs       what the robot code wrote to the table this cycle.
+     * @param cameraMatrix camera intrinsics, needed for MegaTag2.
+     * @param distCoeffs   distortion coefficients, needed for MegaTag2.
+     * @param megaTag2     whether the MegaTag2 estimate should be attempted.
+     * @return the translated frame.
      */
     public LimelightFrame translate(
             PhotonPipelineResult result,
@@ -151,8 +152,8 @@ public class LimelightTargetTranslator {
     }
 
     /**
-     * Aplica el filtro de ids que puso el robot code. Sin filtro, devuelve los targets tal
-     * cual, preservando el orden de photonlib (el mejor primero).
+     * Applies the id filter the robot code installed. With no filter, it returns the targets as
+     * they came, preserving photonlib's order (best first).
      */
     private List<PhotonTrackedTarget> filterTargets(
             PhotonPipelineResult result, LimelightNTInputs inputs) {
@@ -169,9 +170,9 @@ public class LimelightTargetTranslator {
     }
 
     /**
-     * Reconstruye el resultado con la lista filtrada. El resultado multi-tag original solo
-     * se conserva si todos los tags que uso sobrevivieron al filtro; si no, se descarta
-     * para que el estimador no use una solucion contaminada.
+     * Rebuilds the result with the filtered list. The original multi-tag result is only kept if
+     * every tag it used survived the filter; otherwise it is dropped so the estimator does not use
+     * a contaminated solution.
      */
     private PhotonPipelineResult withTargets(
             PhotonPipelineResult original,
@@ -191,7 +192,7 @@ public class LimelightTargetTranslator {
                 original.metadata, targets, multitagStillValid ? multitag : Optional.empty());
     }
 
-    /** MegaTag1: multi-tag si lo hay, si no el tag de menor ambiguedad. */
+    /** MegaTag1: multi-tag if there is one, otherwise the least ambiguous tag. */
     private Optional<Pose3d> estimateMegaTag1(PhotonPipelineResult result) {
         Optional<Pose3d> multiTag =
                 estimator.estimateCoprocMultiTagPose(result).map(e -> e.estimatedPose);
@@ -202,9 +203,9 @@ public class LimelightTargetTranslator {
     }
 
     /**
-     * MegaTag2: PnP restringido con el yaw del robot fijado. Devuelve vacio si el robot no
-     * publico su orientacion, que es el mismo comportamiento que tiene un Limelight real
-     * cuando nadie llama a {@code SetRobotOrientation}.
+     * MegaTag2: constrained PnP with the robot's yaw pinned. It returns empty if the robot did not
+     * publish its orientation, which is the same behaviour a real Limelight has when nobody calls
+     * {@code SetRobotOrientation}.
      */
     private Optional<Pose3d> estimateMegaTag2(
             PhotonPipelineResult result,
@@ -234,12 +235,12 @@ public class LimelightTargetTranslator {
                             headingScaleFactor)
                     .map(e -> e.estimatedPose);
         } catch (UnsatisfiedLinkError | NoClassDefFoundError e) {
-            // El solver restringido vive en JNI. Si la libreria nativa no esta disponible
-            // (tests headless, por ejemplo) se desactiva MegaTag2 en vez de reventar cada ciclo.
+            // The constrained solver lives in JNI. If the native library is unavailable (headless
+            // tests, for example) MegaTag2 is switched off instead of blowing up every cycle.
             constrainedSolverAvailable = false;
             System.err.println(
-                    "[SimulatedLimelight] Constrained SolvePnP no disponible; "
-                            + "botpose_orb queda desactivado: "
+                    "[SimulatedLimelight] Constrained SolvePnP unavailable; "
+                            + "botpose_orb is disabled: "
                             + e.getMessage());
             return Optional.empty();
         }
@@ -266,7 +267,7 @@ public class LimelightTargetTranslator {
         return out;
     }
 
-    /** Distancia maxima entre los tags visibles, que es lo que Limelight llama "tag span". */
+    /** Maximum distance between the visible tags, which is what Limelight calls the "tag span". */
     private double tagSpanMeters(List<PhotonTrackedTarget> targets) {
         List<Translation3d> positions = new ArrayList<>(targets.size());
         for (PhotonTrackedTarget target : targets) {
@@ -300,8 +301,8 @@ public class LimelightTargetTranslator {
     }
 
     /**
-     * Metricas en pixeles del target primario, derivadas del rectangulo de area minima que
-     * ya calcula photonlib.
+     * Pixel metrics of the primary target, derived from the minimum-area rectangle photonlib
+     * already computes.
      */
     private LimelightFrame.PixelMetrics pixelMetrics(PhotonTrackedTarget target) {
         List<TargetCorner> corners = target.getMinAreaRectCorners();

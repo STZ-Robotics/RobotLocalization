@@ -7,40 +7,39 @@ import edu.wpi.first.math.geometry.Transform3d;
 import java.util.Optional;
 
 /**
- * Snapshot inmutable de un ciclo de la camara simulada, ya traducido a la
- * semantica de un Limelight real (grados, porcentajes, convenciones de signo).
+ * An immutable snapshot of one simulated-camera cycle, already translated into the
+ * semantics of a real Limelight (degrees, percentages, sign conventions).
  *
- * <p>Esta es la moneda de cambio interna de la feature: el
- * {@link LimelightTargetTranslator} la produce a partir de un
- * {@code PhotonPipelineResult}, y tanto {@link LimelightNTPublisher} como
- * {@link LimelightSimDevice} la consumen. Manteniendo un unico frame por ciclo
- * se garantiza que NetworkTables y el SimDevice nunca queden desincronizados.
+ * <p>This is the feature's internal currency: the {@link LimelightTargetTranslator}
+ * produces it from a {@code PhotonPipelineResult}, and both {@link LimelightNTPublisher}
+ * and {@link LimelightSimDevice} consume it. Keeping a single frame per cycle guarantees
+ * NetworkTables and the SimDevice never fall out of sync.
  *
- * @param hasTarget              equivalente a {@code tv != 0}.
- * @param tx                     offset horizontal al crosshair en grados, positivo a la derecha
- *                               (convencion Limelight; PhotonVision usa positivo a la izquierda).
- * @param ty                     offset vertical al crosshair en grados, positivo hacia arriba.
- * @param txnc                   offset horizontal respecto al punto principal, en grados.
- * @param tync                   offset vertical respecto al punto principal, en grados.
- * @param ta                     area del target como porcentaje de la imagen (0-100).
- * @param ts                     skew/rotacion del target en grados.
- * @param tid                    id del AprilTag primario, o -1 si no hay target.
- * @param pipelineLatencyMs      latencia atribuida al pipeline (key {@code tl}).
- * @param captureLatencyMs       latencia atribuida a la captura (key {@code cl}).
- * @param captureTimestampSeconds instante de captura del frame, en la base de tiempo del FPGA.
- * @param targetCount            numero de fiduciales visibles tras aplicar filtros de id.
- * @param fiducials              detalle por tag visible, en el orden que publica {@code rawfiducials}.
- * @param megaTag1Pose           pose del robot estimada sin heading externo (equivalente a MegaTag1),
- *                               en campo con origen azul.
- * @param megaTag2Pose           pose del robot estimada fijando el heading que el robot code escribio
- *                               en {@code robot_orientation_set} (equivalente a MegaTag2).
- * @param tagSpanMeters          distancia maxima entre los tags usados para la estimacion.
- * @param avgTagDistMeters       distancia promedio camara-tag de los tags usados.
- * @param avgTagAreaPercent      area promedio de los tags usados, como porcentaje de la imagen.
- * @param cameraToTarget         transformada camara -&gt; tag primario, en convencion WPILib.
- * @param robotToTarget          transformada robot -&gt; tag primario, en convencion WPILib.
- * @param targetPixelMetrics     metricas en pixeles del target primario, para la key {@code t2d}.
- * @param cornersXY              esquinas detectadas en pixeles, aplanadas como {@code [x0,y0,x1,y1,...]}.
+ * @param hasTarget              equivalent to {@code tv != 0}.
+ * @param tx                     horizontal offset to the crosshair in degrees, positive to the right
+ *                               (Limelight convention; PhotonVision uses positive to the left).
+ * @param ty                     vertical offset to the crosshair in degrees, positive upwards.
+ * @param txnc                   horizontal offset from the principal point, in degrees.
+ * @param tync                   vertical offset from the principal point, in degrees.
+ * @param ta                     target area as a percentage of the image (0-100).
+ * @param ts                     target skew/rotation in degrees.
+ * @param tid                    id of the primary AprilTag, or -1 if there is no target.
+ * @param pipelineLatencyMs      latency attributed to the pipeline (key {@code tl}).
+ * @param captureLatencyMs       latency attributed to the capture (key {@code cl}).
+ * @param captureTimestampSeconds the frame's capture instant, in the FPGA time base.
+ * @param targetCount            number of visible fiducials after applying the id filters.
+ * @param fiducials              per-visible-tag detail, in the order {@code rawfiducials} publishes.
+ * @param megaTag1Pose           robot pose estimated without an external heading (the MegaTag1
+ *                               equivalent), in the blue-origin field frame.
+ * @param megaTag2Pose           robot pose estimated by pinning the heading the robot code wrote to
+ *                               {@code robot_orientation_set} (the MegaTag2 equivalent).
+ * @param tagSpanMeters          maximum distance between the tags used for the estimate.
+ * @param avgTagDistMeters       average camera-to-tag distance of the tags used.
+ * @param avgTagAreaPercent      average area of the tags used, as a percentage of the image.
+ * @param cameraToTarget         camera -&gt; primary tag transform, in the WPILib convention.
+ * @param robotToTarget          robot -&gt; primary tag transform, in the WPILib convention.
+ * @param targetPixelMetrics     pixel metrics of the primary target, for the {@code t2d} key.
+ * @param cornersXY              detected corners in pixels, flattened as {@code [x0,y0,x1,y1,...]}.
  */
 public record LimelightFrame(
         boolean hasTarget,
@@ -66,23 +65,23 @@ public record LimelightFrame(
         PixelMetrics targetPixelMetrics,
         double[] cornersXY) {
 
-    /** Array vacio reutilizable para frames sin detecciones. */
+    /** A reusable empty array for frames with no detections. */
     private static final RawFiducial[] NO_FIDUCIALS = new RawFiducial[0];
 
-    /** Array vacio reutilizable para frames sin esquinas. */
+    /** A reusable empty array for frames with no corners. */
     private static final double[] NO_CORNERS = new double[0];
 
     /**
-     * Una deteccion individual de AprilTag, con el mismo contenido y orden que los
-     * 7 valores por tag que un Limelight real publica en {@code rawfiducials}.
+     * A single AprilTag detection, with the same content and order as the 7 per-tag values
+     * a real Limelight publishes to {@code rawfiducials}.
      *
-     * @param id            id del fiducial.
-     * @param txnc          offset horizontal respecto al punto principal, en grados.
-     * @param tync          offset vertical respecto al punto principal, en grados.
-     * @param ta            area del tag como porcentaje de la imagen.
-     * @param distToCamera  distancia camara-tag en metros.
-     * @param distToRobot   distancia origen del robot-tag en metros.
-     * @param ambiguity     ambiguedad de la solucion PnP (0 = sin ambiguedad).
+     * @param id            fiducial id.
+     * @param txnc          horizontal offset from the principal point, in degrees.
+     * @param tync          vertical offset from the principal point, in degrees.
+     * @param ta            tag area as a percentage of the image.
+     * @param distToCamera  camera-to-tag distance in metres.
+     * @param distToRobot   robot-origin-to-tag distance in metres.
+     * @param ambiguity     ambiguity of the PnP solution (0 = no ambiguity).
      */
     public record RawFiducial(
             int id,
@@ -94,13 +93,13 @@ public record LimelightFrame(
             double ambiguity) {}
 
     /**
-     * Metricas en pixeles del target primario. Alimentan los indices 12-15 de la key
-     * {@code t2d}; un Limelight real las expone para logica de vision 2D fina.
+     * Pixel metrics of the primary target. They feed indices 12-15 of the {@code t2d} key;
+     * a real Limelight exposes them for fine-grained 2D vision logic.
      *
-     * @param longSidePixels       lado largo del rectangulo de area minima.
-     * @param shortSidePixels      lado corto del rectangulo de area minima.
-     * @param horizontalExtentPx   ancho del bounding box alineado a los ejes.
-     * @param verticalExtentPx     alto del bounding box alineado a los ejes.
+     * @param longSidePixels       long side of the minimum-area rectangle.
+     * @param shortSidePixels      short side of the minimum-area rectangle.
+     * @param horizontalExtentPx   width of the axis-aligned bounding box.
+     * @param verticalExtentPx     height of the axis-aligned bounding box.
      */
     public record PixelMetrics(
             double longSidePixels,
@@ -108,19 +107,19 @@ public record LimelightFrame(
             double horizontalExtentPx,
             double verticalExtentPx) {
 
-        /** Metricas en cero, para frames sin target. */
+        /** All-zero metrics, for frames with no target. */
         public static final PixelMetrics ZERO = new PixelMetrics(0, 0, 0, 0);
     }
 
     /**
-     * Frame sin detecciones, con la latencia y el timestamp del ciclo actual.
-     * Un Limelight real sigue publicando a su FPS aunque no vea nada, asi que esto
-     * es lo que se publica cuando el pipeline devuelve cero targets.
+     * A frame with no detections, carrying the current cycle's latency and timestamp. A real
+     * Limelight keeps publishing at its FPS even when it sees nothing, so this is what gets
+     * published when the pipeline returns zero targets.
      *
-     * @param pipelineLatencyMs       latencia del pipeline en milisegundos.
-     * @param captureLatencyMs        latencia de captura en milisegundos.
-     * @param captureTimestampSeconds timestamp de captura en segundos del FPGA.
-     * @return un frame vacio pero temporalmente coherente.
+     * @param pipelineLatencyMs       pipeline latency in milliseconds.
+     * @param captureLatencyMs        capture latency in milliseconds.
+     * @param captureTimestampSeconds capture timestamp in FPGA seconds.
+     * @return an empty but temporally coherent frame.
      */
     public static LimelightFrame empty(
             double pipelineLatencyMs, double captureLatencyMs, double captureTimestampSeconds) {
@@ -150,10 +149,10 @@ public record LimelightFrame(
     }
 
     /**
-     * Latencia total del frame, que es lo que hay que restarle al instante de lectura
-     * para fechar una medicion de vision.
+     * The frame's total latency, which is what has to be subtracted from the read instant to
+     * date a vision measurement.
      *
-     * @return {@code tl + cl} en milisegundos.
+     * @return {@code tl + cl} in milliseconds.
      */
     public double totalLatencyMs() {
         return pipelineLatencyMs + captureLatencyMs;

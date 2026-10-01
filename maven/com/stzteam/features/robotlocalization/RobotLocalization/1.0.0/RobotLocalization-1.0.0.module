@@ -28,10 +28,10 @@
           "name": "RobotLocalization-1.0.0.jar",
           "url": "RobotLocalization-1.0.0.jar",
           "size": 113473,
-          "sha512": "930906338d0dea84d5311ef738dafc4d213b62462fa0c8b1922aebd13f7fe28ec776abbe46b8110a7b1499921aa580a88300c8a723169ae6024992a60d0305fb",
-          "sha256": "53612fe703cbe0622edd669c6c0aeaf8fbc330bfa9f2f054d6020113340aa428",
-          "sha1": "c67a8eee1eab77117bac8f346773019465fcb967",
-          "md5": "3abc5262cd1b4126a8ea5691aa019b98"
+          "sha512": "5bc3ef09c0c94acd47419bc39814aa12df3b4ceee2b9823e05af387de5762204323bca30970ab45d1ddee981b97255c735f7232a81e8a3b25a91cff04bf153f5",
+          "sha256": "8de88cc64c17c7e92427c5bc9e39975584bccb9bfb86c7dc9497e82ed102b53f",
+          "sha1": "55f6a6c4bc6ed27d95ee26bc6a92b90e6bb69435",
+          "md5": "9302b478086e862c12538d65db319b6d"
         }
       ]
     },
@@ -212,10 +212,10 @@
           "name": "RobotLocalization-1.0.0.jar",
           "url": "RobotLocalization-1.0.0.jar",
           "size": 113473,
-          "sha512": "930906338d0dea84d5311ef738dafc4d213b62462fa0c8b1922aebd13f7fe28ec776abbe46b8110a7b1499921aa580a88300c8a723169ae6024992a60d0305fb",
-          "sha256": "53612fe703cbe0622edd669c6c0aeaf8fbc330bfa9f2f054d6020113340aa428",
-          "sha1": "c67a8eee1eab77117bac8f346773019465fcb967",
-          "md5": "3abc5262cd1b4126a8ea5691aa019b98"
+          "sha512": "5bc3ef09c0c94acd47419bc39814aa12df3b4ceee2b9823e05af387de5762204323bca30970ab45d1ddee981b97255c735f7232a81e8a3b25a91cff04bf153f5",
+          "sha256": "8de88cc64c17c7e92427c5bc9e39975584bccb9bfb86c7dc9497e82ed102b53f",
+          "sha1": "55f6a6c4bc6ed27d95ee26bc6a92b90e6bb69435",
+          "md5": "9302b478086e862c12538d65db319b6d"
         }
       ]
     }

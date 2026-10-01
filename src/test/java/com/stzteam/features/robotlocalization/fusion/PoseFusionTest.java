@@ -28,12 +28,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.OptionalDouble;
 
-/** El portero completo: filtros, consenso, Mahalanobis y telemetria. */
+/** The whole gatekeeper: filters, consensus, Mahalanobis and telemetry. */
 class PoseFusionTest {
 
     private static final String TABLE = "LocalizationTest";
 
-    /** Una fuente controlada a mano, para poder provocar cada caso. */
+    /** A hand-driven source, so every case can be provoked. */
     private static final class FakeSource extends PoseSource {
         private Optional<PoseSample> next = Optional.empty();
         private OptionalDouble ambiguity = OptionalDouble.empty();
@@ -111,8 +111,8 @@ class PoseFusionTest {
     private FakeSource register(String name, PoseSourceConfig config) {
         FakeSource source = new FakeSource(name, config);
         fusion.registerSource(source);
-        // Deja el interruptor del dashboard en un estado conocido: los tests comparten la instancia
-        // global de NetworkTables.
+        // Leaves the dashboard switch in a known state: the tests share the global NetworkTables
+        // instance.
         NetworkIO.set(TABLE, name + "/enabled", true);
         source.setEnabled(true);
         return source;
@@ -132,8 +132,8 @@ class PoseFusionTest {
 
     @Test
     void disablingFromCodeSurvivesTheCycle() {
-        // El bug: pollDashboardControls() corria al principio de update() y sobrescribia el valor
-        // con el de NetworkTables, asi que apagar una fuente desde codigo no duraba ni un ciclo.
+        // The bug: pollDashboardControls() ran at the start of update() and overwrote the value with
+        // the NetworkTables one, so disabling a source from code did not last a single cycle.
         FakeSource source = register("a", new PoseSourceConfig());
         source.report(1.2, 10.0);
         fusion.update();
@@ -143,8 +143,8 @@ class PoseFusionTest {
         source.report(1.2, 11.0);
         fusion.update();
 
-        assertEquals(1, accepted.size(), "la fuente apagada desde codigo no deberia aportar nada");
-        assertFalse(source.isEnabled(), "y deberia seguir apagada");
+        assertEquals(1, accepted.size(), "the source disabled from code should contribute nothing");
+        assertFalse(source.isEnabled(), "and it should stay disabled");
         assertEquals(RejectionReason.DISABLED, source.getLastReason());
     }
 
@@ -175,7 +175,7 @@ class PoseFusionTest {
 
         assertTrue(accepted.isEmpty());
         assertEquals(RejectionReason.ANGULAR_VELOCITY, source.getLastReason());
-        assertEquals(0, source.readCount, "ni siquiera deberia leer el hardware");
+        assertEquals(0, source.readCount, "it should not even read the hardware");
     }
 
     @Test
@@ -204,7 +204,7 @@ class PoseFusionTest {
 
     @Test
     void ambiguousSolutionsAreRejected() {
-        // El gate existia pero no lo llamaba nadie: una medicion con ambiguedad 0.9 pasaba entera.
+        // The gate existed but nobody called it: a measurement with ambiguity 0.9 sailed right through.
         FakeSource source = register("a", new PoseSourceConfig().withMaxAmbiguity(0.3));
         source.report(1.2, 10.0);
         source.ambiguity = OptionalDouble.of(0.9);
@@ -254,27 +254,27 @@ class PoseFusionTest {
     void aBrokenSourceDoesNotTakeDownTheOthers() {
         FakeSource broken = register("broken", new PoseSourceConfig());
         FakeSource healthy = register("healthy", new PoseSourceConfig());
-        broken.toThrow = new IllegalStateException("camara desconectada");
+        broken.toThrow = new IllegalStateException("camera disconnected");
         healthy.report(1.2, 10.0);
 
         fusion.update();
 
-        assertEquals(1, accepted.size(), "la sana deberia seguir aportando");
+        assertEquals(1, accepted.size(), "the healthy one should keep contributing");
         assertEquals(RejectionReason.SOURCE_ERROR, broken.getLastReason());
         assertEquals(RejectionReason.ACCEPTED, healthy.getLastReason());
     }
 
     @Test
     void theFirstMeasurementIsAlwaysAcceptedByTheMahalanobisGate() {
-        // Antes esto funcionaba por accidente: con lastAcceptedTimestamp en -1, el dt valia decenas
-        // de segundos y la varianza crecia tanto que aceptaba cualquier cosa.
+        // This used to work by accident: with lastAcceptedTimestamp at -1, dt was tens of seconds and
+        // the variance grew so much that it accepted anything.
         FakeSource source =
                 register("a", new PoseSourceConfig().withMahalanobisGate(3.0, 0.05, 0.05, 0.0));
         source.report(50.0, 10.0);
 
         fusion.update();
 
-        assertEquals(1, accepted.size(), "no hay contra que compararla todavia");
+        assertEquals(1, accepted.size(), "there is nothing to compare it against yet");
     }
 
     @Test
@@ -293,8 +293,8 @@ class PoseFusionTest {
 
     @Test
     void theMahalanobisGateOpensAfterALongSilence() {
-        // Si la puerta no se abriera con el tiempo, un estimator que se fue de sitio no podria
-        // volver nunca: todo le pareceria irrazonable para siempre.
+        // If the gate did not open up over time, an estimator that wandered off could never come
+        // back: everything would look unreasonable to it forever.
         FakeSource source =
                 register("a", new PoseSourceConfig().withMahalanobisGate(3.0, 0.05, 0.05, 5.0));
         source.report(1.0, 10.0);
@@ -304,7 +304,7 @@ class PoseFusionTest {
         source.report(4.0, 40.0);
         fusion.update();
 
-        assertEquals(1, accepted.size(), "tras 30 s sin datos la incertidumbre justifica el salto");
+        assertEquals(1, accepted.size(), "after 30 s with no data the uncertainty justifies the jump");
     }
 
     @Test

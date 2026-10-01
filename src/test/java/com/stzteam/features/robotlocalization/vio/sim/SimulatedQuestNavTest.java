@@ -25,17 +25,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * La prueba que importa: instancia el {@link QuestNav} <b>real</b> del vendordep contra nuestro
- * publicador y comprueba que ve lo que veria contra un headset fisico.
+ * The test that matters: it instantiates the vendordep's <b>real</b> {@link QuestNav} against our
+ * publisher and checks that it sees what it would see against a physical headset.
  *
- * <p>Si esto pasa, el subsistema de un equipo funciona sin tocar una linea.
+ * <p>If this passes, a team's subsystem works without touching a line.
  */
 class SimulatedQuestNavTest {
 
     private static final double LOOP_PERIOD = 0.02;
 
-    /** El mount real de STZ. Se usa a proposito en vez de la identidad: un mount girado 90 grados
-     * destapa errores de composicion que la identidad esconde. */
+    /** STZ's real mount. Used on purpose instead of the identity: a mount rotated 90 degrees
+     * uncovers composition errors the identity hides. */
     private static final Transform3d ROBOT_TO_QUEST =
             new Transform3d(
                     new Translation3d(0.0, -0.332, 0.0),
@@ -47,15 +47,15 @@ class SimulatedQuestNavTest {
 
     @BeforeEach
     void setUp() {
-        assertTrue(HAL.initialize(500, 0), "no se pudo inicializar el HAL");
+        assertTrue(HAL.initialize(500, 0), "could not initialise the HAL");
         SimDeviceSim.resetData();
         SimHooks.pauseTiming();
 
-        // A proposito no se levanta un servidor NT4 aqui. Se intento para que `serverTime` fuera
-        // real, pero ntcore marca con el centinela todo lo publicado en la misma instancia que lo
-        // consume, con servidor o sin el --- que es justo lo que fija
-        // inLocalModeDataTimestampIsTheNtSentinelAndMustNotBeUsedForFusion. Lo unico que aportaba
-        // era chocar con el puerto 5810 cuando hay una simulacion corriendo.
+        // No NT4 server is brought up here, on purpose. It was tried so `serverTime` would be real,
+        // but ntcore marks everything published on the same instance that consumes it with the
+        // sentinel, server or no server --- which is exactly what
+        // inLocalModeDataTimestampIsTheNtSentinelAndMustNotBeUsedForFusion pins down. The only thing it
+        // contributed was clashing with port 5810 when a simulation is running.
 
         sim = new SimulatedQuestNav(ROBOT_TO_QUEST, QuestNavSimConfig.perfect());
         robotSide = new QuestNav();
@@ -73,8 +73,8 @@ class SimulatedQuestNavTest {
     void theRealVendorLibrarySeesAConnectedTrackingHeadset() {
         runLoops(10);
 
-        assertTrue(robotSide.isConnected(), "el robot code deberia ver el headset conectado");
-        assertTrue(robotSide.isTracking(), "y deberia ver tracking valido");
+        assertTrue(robotSide.isConnected(), "the robot code should see the headset connected");
+        assertTrue(robotSide.isTracking(), "and it should see valid tracking");
     }
 
     @Test
@@ -82,55 +82,55 @@ class SimulatedQuestNavTest {
         runLoops(10);
         assertTrue(robotSide.isConnected());
 
-        // isConnected() mira si el ultimo frameData llego hace menos de 120 ms.
+        // isConnected() checks whether the last frameData arrived less than 120 ms ago.
         sim.injectLinkLoss(1.0);
         runLoops(10);
 
-        assertFalse(robotSide.isConnected(), "sin frames nuevos deberia caerse a los 120 ms");
+        assertFalse(robotSide.isConnected(), "with no new frames it should fall after 120 ms");
 
         runLoops(60);
-        assertTrue(robotSide.isConnected(), "y deberia recuperarse cuando vuelve el enlace");
+        assertTrue(robotSide.isConnected(), "and it should recover when the link comes back");
     }
 
     @Test
     void severalFramesArriveEachLoopWithSpacedTimestamps() {
-        // El headset va a 100 Hz y el bucle a 50: cada ciclo tienen que llegar ~2 frames, con
-        // timestamps separados 10 ms. Es justo la API que los equipos usan mal mas seguido.
+        // The headset runs at 100 Hz and the loop at 50: ~2 frames have to arrive each cycle, with
+        // timestamps 10 ms apart. It is precisely the API teams most often get wrong.
         runLoops(5);
         robotSide.getAllUnreadPoseFrames();
 
         runLoops(1);
         PoseFrame[] frames = robotSide.getAllUnreadPoseFrames();
 
-        assertEquals(2, frames.length, "un ciclo de 20 ms a 100 Hz son 2 frames");
+        assertEquals(2, frames.length, "a 20 ms cycle at 100 Hz is 2 frames");
         assertEquals(
                 frames[0].frameCount() + 1,
                 frames[1].frameCount(),
-                "el contador de frames deberia ser consecutivo");
+                "the frame counter should be consecutive");
         assertEquals(
                 0.010,
                 frames[1].appTimestamp() - frames[0].appTimestamp(),
                 1e-9,
-                "el reloj del headset deberia avanzar 10 ms entre frames");
+                "the headset's clock should advance 10 ms between frames");
 
     }
 
     @Test
     void inLocalModeDataTimestampIsTheNtSentinelAndMustNotBeUsedForFusion() {
-        // Fija una limitacion real, para que nadie se la encuentre de sorpresa: publicando en la
-        // misma instancia de NetworkTables que consume el robot, ntcore marca los valores con
-        // serverTime = 1, y PoseFrame.dataTimestamp() --- que sale de ahi --- queda clavado en
-        // 1 microsegundo. Para fusionar por timestamp hace falta withNetworkClient(true).
+        // Pins down a real limitation, so nobody runs into it by surprise: publishing on the same
+        // NetworkTables instance the robot consumes, ntcore marks the values with serverTime = 1, and
+        // PoseFrame.dataTimestamp() --- which comes from there --- is nailed to 1 microsecond. Fusing on
+        // timestamps requires withNetworkClient(true).
         runLoops(10);
         PoseFrame[] frames = robotSide.getAllUnreadPoseFrames();
 
         assertEquals(1e-6, frames[0].dataTimestamp(), 1e-12);
         assertEquals(frames[0].dataTimestamp(), frames[frames.length - 1].dataTimestamp(), 1e-12);
 
-        // El reloj de la app si avanza, y es el que queda utilizable en modo local.
+        // The app's clock does advance, and it is the one that stays usable in local mode.
         assertTrue(
                 frames[frames.length - 1].appTimestamp() > frames[0].appTimestamp(),
-                "el reloj del headset deberia avanzar aunque el de NT no");
+                "the headset's clock should advance even when NT's does not");
     }
 
     @Test
@@ -139,7 +139,7 @@ class SimulatedQuestNavTest {
         PoseFrame[] frames = robotSide.getAllUnreadPoseFrames();
         assertTrue(frames.length > 0);
 
-        // Lo que hace el robot code: deshacer el mount sobre lo que reporta el headset.
+        // What the robot code does: undo the mount on what the headset reports.
         Pose3d reportedRobot =
                 frames[frames.length - 1].questPose3d().transformBy(ROBOT_TO_QUEST.inverse());
 
@@ -151,18 +151,18 @@ class SimulatedQuestNavTest {
 
     @Test
     void setPoseFromRobotCodeReanchorsTheHeadsetOrigin() {
-        // Sin ruido, para que el reset se pueda comprobar exacto: lo que se prueba aqui es el
-        // reanclaje del origen, no el modelo de error.
+        // No noise, so the reset can be checked exactly: what is being tested here is the origin
+        // re-anchoring, not the error model.
         sim = replaceSimWith(QuestNavSimConfig.perfect().withRandomizedOrigin(true).withRandomSeed(3));
         runLoops(5);
         robotSide.getAllUnreadPoseFrames();
 
-        // Con el origen del Quest desplazado, lo que reporta NO es una pose de campo...
+        // With the Quest's origin displaced, what it reports is NOT a field pose...
         Pose3d target = new Pose3d(robotPose).transformBy(ROBOT_TO_QUEST);
         robotSide.setPose(target);
         runLoops(5);
 
-        // ...hasta que el robot code lo reancla, que es exactamente el paso que mas equipos olvidan.
+        // ...until the robot code re-anchors it, which is exactly the step most teams forget.
         PoseFrame[] frames = robotSide.getAllUnreadPoseFrames();
         Pose3d reported = frames[frames.length - 1].questPose3d();
 
@@ -179,21 +179,21 @@ class SimulatedQuestNavTest {
         SimDeviceSim device = new SimDeviceSim(QuestNavSimDevice.DEVICE_PREFIX + "QuestNav", 0);
         device.getBoolean("Force Tracking Loss").set(true);
 
-        // deviceData va a 3 Hz, asi que el contador de perdidas tarda hasta un tercio de segundo en
-        // llegar. Es el comportamiento del hardware, no una lentitud de la simulacion.
+        // deviceData runs at 3 Hz, so the loss counter takes up to a third of a second to arrive. That
+        // is the hardware's behaviour, not slowness in the simulation.
         runLoops(25);
 
-        assertFalse(robotSide.isTracking(), "el robot code deberia ver que se perdio el tracking");
+        assertFalse(robotSide.isTracking(), "the robot code should see that tracking was lost");
         assertTrue(
                 robotSide.getTrackingLostCounter().orElse(0) > 0,
-                "y el contador de perdidas deberia haber subido");
+                "and the loss counter should have gone up");
     }
 
     @Test
     void aPoseDiscontinuityIsInvisibleToTheRobotCode() {
-        // El fallo mas traicionero del Quest: el doble-tap a passthrough que dispara la vibracion
-        // del chasis mueve la pose de golpe sin tocar isTracking. El robot code no tiene ninguna
-        // senal que mirar, y un pose estimator que confia 2 cm se lo traga entero.
+        // The Quest's most treacherous failure: the double-tap to passthrough that chassis vibration
+        // triggers moves the pose all at once without touching isTracking. The robot code has no signal
+        // to look at, and a pose estimator trusting 2 cm swallows the whole thing.
         runLoops(10);
         robotSide.getAllUnreadPoseFrames();
         runLoops(5);
@@ -207,8 +207,8 @@ class SimulatedQuestNavTest {
                 0.4,
                 after.getTranslation().getDistance(before.getTranslation()),
                 1e-6,
-                "la pose deberia haber saltado");
-        assertTrue(robotSide.isTracking(), "y nada en el protocolo lo delata");
+                "the pose should have jumped");
+        assertTrue(robotSide.isTracking(), "and nothing in the protocol gives it away");
     }
 
     @Test
@@ -234,7 +234,7 @@ class SimulatedQuestNavTest {
         assertEquals(robotPose.getY(), truePose.getY(), 1e-9);
     }
 
-    /** Recrea el simulador con otra configuracion, manteniendo el robot code del test. */
+    /** Recreates the simulator with another configuration, keeping the test's robot code. */
     private SimulatedQuestNav replaceSimWith(QuestNavSimConfig config) {
         SimulatedQuestNav.closeAll();
         SimDeviceSim.resetData();
@@ -243,11 +243,11 @@ class SimulatedQuestNavTest {
 
     private Pose3d latestQuestPose() {
         PoseFrame[] frames = robotSide.getAllUnreadPoseFrames();
-        assertTrue(frames.length > 0, "deberia haber frames");
+        assertTrue(frames.length > 0, "there should be frames");
         return frames[frames.length - 1].questPose3d();
     }
 
-    /** Avanza el reloj simulado y corre el ciclo, como haria un TimedRobot. */
+    /** Advances the simulated clock and runs the cycle, as a TimedRobot would. */
     private void runLoops(int count) {
         for (int i = 0; i < count; i++) {
             SimHooks.stepTiming(LOOP_PERIOD);

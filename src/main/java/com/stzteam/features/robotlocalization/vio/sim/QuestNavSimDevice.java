@@ -7,24 +7,24 @@ import edu.wpi.first.hal.SimDouble;
 import edu.wpi.first.math.util.Units;
 
 /**
- * Registra el headset simulado como un {@code SimDevice} de HAL, para que aparezca solo en el panel
- * "Other Devices" del Sim GUI bajo el nodo {@code QuestNav}, igual que la Limelight simulada
- * aparece bajo {@code Limelight}.
+ * Registers the simulated headset as a HAL {@code SimDevice}, so it shows up on its own in the Sim
+ * GUI's "Other Devices" panel under the {@code QuestNav} node, just as the simulated Limelight shows
+ * up under {@code Limelight}.
  *
- * <p>Fuera de simulacion {@code SimDevice.create} devuelve {@code null} y la clase entera queda como
- * un no-op.
+ * <p>Outside simulation {@code SimDevice.create} returns {@code null} and the whole class becomes a
+ * no-op.
  *
- * <h2>Los tres interruptores</h2>
- * Los campos {@code kInput} son la parte util de verdad: se marcan desde el Sim GUI, en caliente,
- * sin recompilar ni mover el robot.
+ * <h2>The three switches</h2>
+ * The {@code kInput} fields are the genuinely useful part: you tick them from the Sim GUI, on the
+ * fly, without recompiling or moving the robot.
  *
  * <ul>
- *   <li><b>Force Tracking Loss</b> &mdash; el Quest pierde features. Al recuperar, la pose vuelve
- *       desplazada.</li>
- *   <li><b>Force Pose Jump</b> &mdash; el doble-tap a passthrough. La pose salta pero
- *       {@code isTracking} se queda en true, que es lo traicionero.</li>
- *   <li><b>Force Link Loss</b> &mdash; cable flojo. Se deja de publicar y el robot ve caer
- *       {@code isConnected()}.</li>
+ *   <li><b>Force Tracking Loss</b> &mdash; the Quest loses features. On recovery, the pose comes back
+ *       displaced.</li>
+ *   <li><b>Force Pose Jump</b> &mdash; the double-tap to passthrough. The pose jumps but
+ *       {@code isTracking} stays true, which is the treacherous part.</li>
+ *   <li><b>Force Link Loss</b> &mdash; loose cable. Publishing stops and the robot sees
+ *       {@code isConnected()} fall.</li>
  * </ul>
  *
  * <pre>{@code
@@ -35,7 +35,7 @@ import edu.wpi.first.math.util.Units;
  */
 public class QuestNavSimDevice implements AutoCloseable {
 
-    /** Prefijo que agrupa a todos los headsets de esta feature en el Sim GUI. */
+    /** The prefix that groups every headset of this feature in the Sim GUI. */
     public static final String DEVICE_PREFIX = "QuestNav:";
 
     private final SimDevice device;
@@ -57,10 +57,10 @@ public class QuestNavSimDevice implements AutoCloseable {
     private final SimBoolean forceLinkLoss;
 
     /**
-     * Crea el dispositivo simulado.
+     * Creates the simulated device.
      *
-     * @param name  nombre logico del headset.
-     * @param index indice para distinguir varios headsets con el mismo nombre.
+     * @param name  the headset's logical name.
+     * @param index an index to tell apart several headsets with the same name.
      */
     public QuestNavSimDevice(String name, int index) {
         device = SimDevice.create(DEVICE_PREFIX + name, index);
@@ -101,29 +101,29 @@ public class QuestNavSimDevice implements AutoCloseable {
         forceLinkLoss = device.createBoolean("Force Link Loss", SimDevice.Direction.kInput, false);
     }
 
-    /** @return true si estamos en simulacion y el dispositivo existe. */
+    /** @return true if we are in simulation and the device exists. */
     public boolean isActive() {
         return device != null;
     }
 
-    /** @return true si alguien pidio perder el tracking. */
+    /** @return true if somebody asked for a tracking loss. */
     public boolean forceTrackingLoss() {
         return forceTrackingLoss != null && forceTrackingLoss.get();
     }
 
-    /** @return true si alguien pidio un salto de pose. */
+    /** @return true if somebody asked for a pose jump. */
     public boolean forcePoseJump() {
         return forcePoseJump != null && forcePoseJump.get();
     }
 
-    /** @return true si alguien pidio cortar el enlace. */
+    /** @return true if somebody asked to cut the link. */
     public boolean forceLinkLoss() {
         return forceLinkLoss != null && forceLinkLoss.get();
     }
 
     /**
-     * Baja el interruptor de salto de pose. Es un pulso, no un estado: si se quedara marcado, la
-     * pose saltaria en cada ciclo y el Sim GUI no tendria forma de mandar un solo salto.
+     * Clears the pose-jump switch. It is a pulse, not a state: if it stayed ticked, the pose would
+     * jump every cycle and the Sim GUI would have no way to send a single jump.
      */
     public void clearPoseJumpRequest() {
         if (forcePoseJump != null) {
@@ -132,11 +132,11 @@ public class QuestNavSimDevice implements AutoCloseable {
     }
 
     /**
-     * Vuelca el estado en los campos del dispositivo.
+     * Dumps the state into the device's fields.
      *
-     * @param frame     ultimo frame generado.
-     * @param model     modelo de error, de donde salen contadores y deriva.
-     * @param publishing si este ciclo se esta publicando de verdad.
+     * @param frame     the last generated frame.
+     * @param model     the error model, where the counters and the drift come from.
+     * @param publishing whether anything is actually being published this cycle.
      */
     public void update(QuestNavFrame frame, VioErrorModel model, boolean publishing) {
         if (device == null) {
@@ -157,7 +157,7 @@ public class QuestNavSimDevice implements AutoCloseable {
         driftYaw.set(model.driftYawDegrees());
     }
 
-    /** Libera el dispositivo de HAL. */
+    /** Releases the HAL device. */
     @Override
     public void close() {
         if (device != null) {

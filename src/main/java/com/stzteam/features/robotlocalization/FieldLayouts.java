@@ -11,20 +11,21 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * Los layouts de AprilTags del campo 2026, empaquetados con la feature.
+ * The 2026 field AprilTag layouts, bundled with the feature.
  *
- * <h2>Por que no basta con {@code AprilTagFields}</h2>
- * El campo 2026 Rebuilt aparecio en WPILib <b>2026.2.2</b>. Un proyecto en 2026.1.1 --- que es lo
- * que trae GradleRIO por defecto ahora mismo --- solo llega hasta
- * {@code k2025ReefscapeWelded}, asi que {@code AprilTagFields.kDefaultField} devuelve el campo de
- * <b>2025</b> sin avisar. Los tags salen donde no van y todo lo demas parece funcionar.
+ * <h2>Why {@code AprilTagFields} is not enough</h2>
+ * The 2026 Rebuilt field landed in WPILib <b>2026.2.2</b>. A project on 2026.1.1 --- which is what
+ * GradleRIO ships by default right now --- only goes up to {@code k2025ReefscapeWelded}, so
+ * {@code AprilTagFields.kDefaultField} silently returns the <b>2025</b> field. The tags end up in
+ * the wrong place and everything else looks like it works.
  *
- * <p>Asi que la feature trae su propia copia de los JSON oficiales de WPILib, y los usa por defecto.
- * Cuando subas a 2026.2.2 o mas, {@code AprilTagFields.k2026RebuiltWelded} hace lo mismo y esto
- * sobra; mientras tanto, no hay que tocar el toolchain para tener el campo correcto.
+ * <p>So the feature carries its own copy of the official WPILib JSON files and uses them by
+ * default. Once you move to 2026.2.2 or later, {@code AprilTagFields.k2026RebuiltWelded} does the
+ * same thing and this becomes redundant; until then, you get the right field without touching the
+ * toolchain.
  *
- * <p>Los archivos son los de {@code wpilibsuite/allwpilib} en la etiqueta {@code v2026.2.2}, sin
- * modificar: 32 tags, campo de 16.541 x 8.069 m en la variante soldada.
+ * <p>The files are the ones from {@code wpilibsuite/allwpilib} at tag {@code v2026.2.2},
+ * unmodified: 32 tags, a 16.541 x 8.069 m field in the welded variant.
  */
 public final class FieldLayouts {
 
@@ -36,9 +37,9 @@ public final class FieldLayouts {
     private FieldLayouts() {}
 
     /**
-     * Campo 2026 Rebuilt, variante soldada. Es la que se usa en la mayoria de los eventos.
+     * The 2026 Rebuilt field, welded variant. This is the one used at most events.
      *
-     * @return el layout, cacheado tras la primera carga.
+     * @return the layout, cached after the first load.
      */
     public static synchronized AprilTagFieldLayout rebuilt2026Welded() {
         if (weldedCache == null) {
@@ -48,10 +49,10 @@ public final class FieldLayouts {
     }
 
     /**
-     * Campo 2026 Rebuilt, variante AndyMark. Difiere unos centimetros en las dimensiones y en la
-     * posicion de algunos tags.
+     * The 2026 Rebuilt field, AndyMark variant. It differs by a few centimetres in the dimensions
+     * and in the position of some tags.
      *
-     * @return el layout, cacheado tras la primera carga.
+     * @return the layout, cached after the first load.
      */
     public static synchronized AprilTagFieldLayout rebuilt2026AndyMark() {
         if (andyMarkCache == null) {
@@ -61,35 +62,35 @@ public final class FieldLayouts {
     }
 
     /**
-     * El campo que la feature usa cuando nadie dice otra cosa.
+     * The field the feature uses when nobody says otherwise.
      *
-     * @return el campo 2026 soldado.
+     * @return the 2026 welded field.
      */
     public static AprilTagFieldLayout defaultField() {
         return rebuilt2026Welded();
     }
 
     /**
-     * Carga un layout desde un archivo propio, por si tu evento usa uno medido.
+     * Loads a layout from your own file, in case your event uses a surveyed one.
      *
-     * @param path ruta al JSON en formato {@code AprilTagFieldLayout}.
-     * @return el layout.
-     * @throws UncheckedIOException si el archivo no se puede leer o no tiene el formato esperado.
+     * @param path path to the JSON in {@code AprilTagFieldLayout} format.
+     * @return the layout.
+     * @throws UncheckedIOException if the file cannot be read or is not in the expected format.
      */
     public static AprilTagFieldLayout fromFile(Path path) {
         try {
             return new AprilTagFieldLayout(path);
         } catch (IOException e) {
-            throw new UncheckedIOException("No se pudo cargar el layout de " + path, e);
+            throw new UncheckedIOException("Could not load the layout from " + path, e);
         }
     }
 
     private static AprilTagFieldLayout load(String fileName) {
-        // No se usa AprilTagFieldLayout.loadFromResource: ese busca en el classloader de WPILib, no
-        // en el de esta feature, y no encontraria un recurso empaquetado en nuestro jar.
+        // AprilTagFieldLayout.loadFromResource is not used: it looks in WPILib's classloader, not
+        // in this feature's, and would not find a resource bundled in our jar.
         try (InputStream stream = FieldLayouts.class.getResourceAsStream(RESOURCE_DIR + fileName)) {
             if (stream == null) {
-                throw new IOException("El recurso " + RESOURCE_DIR + fileName + " no esta en el jar");
+                throw new IOException("Resource " + RESOURCE_DIR + fileName + " is not in the jar");
             }
 
             Path temp = Files.createTempFile("mars-field-", ".json");
@@ -101,7 +102,7 @@ public final class FieldLayouts {
 
             return new AprilTagFieldLayout(temp);
         } catch (IOException e) {
-            throw new UncheckedIOException("No se pudo cargar el campo " + fileName, e);
+            throw new UncheckedIOException("Could not load field " + fileName, e);
         }
     }
 }

@@ -23,21 +23,21 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * La pose que resuelve la camara contra el campo <b>2026</b>, en la escena exacta de una simulacion
- * viva que la daba mal.
+ * The pose the camera solves against the <b>2026</b> field, in the exact scene from a live simulation
+ * that was getting it wrong.
  *
- * <p>Los otros tests de integracion fijan el campo 2025 a proposito, para no depender de que cambie
- * el layout por defecto. Eso les impidio ver esto.
+ * <p>The other integration tests pin the 2025 field on purpose, so as not to depend on the default
+ * layout changing. That is what kept them from seeing this.
  */
 class Field2026SolveTest {
 
     private static final String CAMERA = "limelight-2026";
     private static final double LOOP_PERIOD = 0.02;
 
-    /** Donde estaba el robot en la simulacion cuando la solucion salia a 12 m de distancia. */
+    /** Where the robot was in the simulation when the solution came out 12 m away. */
     private static final Pose2d ROBOT_POSE = new Pose2d(2.71, 2.56, Rotation2d.fromDegrees(1.4));
 
-    /** El mismo montaje del proyecto de pruebas. */
+    /** The same mounting as the test project. */
     private static final Transform3d ROBOT_TO_CAMERA =
             new Transform3d(
                     new Translation3d(0.30, 0.0, 0.50),
@@ -86,39 +86,39 @@ class Field2026SolveTest {
         runLoops(20);
 
         LimelightFrame frame = limelight.lastFrame();
-        assertTrue(frame.hasTarget(), "la camara deberia ver tags");
-        assertTrue(frame.megaTag1Pose().isPresent(), "deberia haber solucion de MegaTag1");
+        assertTrue(frame.hasTarget(), "the camera should see tags");
+        assertTrue(frame.megaTag1Pose().isPresent(), "there should be a MegaTag1 solution");
 
         Pose3d solved = frame.megaTag1Pose().get();
         assertEquals(
                 ROBOT_POSE.getX(),
                 solved.getX(),
                 0.30,
-                "la solucion deberia caer sobre el robot, y cayo en x=" + solved.getX());
+                "the solution should land on the robot, and it landed at x=" + solved.getX());
         assertEquals(ROBOT_POSE.getY(), solved.getY(), 0.30);
     }
 
     @Test
     void theCameraCannotSeeTagsAcrossTheWholeField() {
-        // VisionSystemSim no modela oclusion, asi que sin limite de alcance la camara ve cualquier
-        // tag dentro del FOV a traves de las paredes del campo. Con el default de 7 m entraban siete
-        // tags --- cinco de ellos entre 8 y 13 m con ambiguedades de hasta 0.99 --- y el PnP
-        // multi-tag los mezclaba con los cercanos y resolvia a doce metros del robot.
+        // VisionSystemSim does not model occlusion, so with no range limit the camera sees any tag
+        // inside the FOV straight through the field walls. Without the 7 m default, seven tags came in
+        // --- five of them between 8 and 13 m with ambiguities up to 0.99 --- and the multi-tag PnP
+        // mixed them with the nearby ones and solved twelve metres from the robot.
         runLoops(20);
 
         LimelightFrame frame = limelight.lastFrame();
         for (LimelightFrame.RawFiducial fiducial : frame.fiducials()) {
             assertTrue(
                     fiducial.distToCamera() <= 7.5,
-                    "el tag " + fiducial.id() + " esta a " + fiducial.distToCamera()
-                            + " m y no deberia ser visible");
+                    "tag " + fiducial.id() + " is " + fiducial.distToCamera()
+                            + " m away and should not be visible");
         }
     }
 
     @Test
     void theSolutionStaysPutAsTagsComeAndGo() {
-        // Una solucion que salta de un lado del campo al otro entre frames es peor que ninguna: el
-        // pose estimator se la come y arrastra al robot con ella.
+        // A solution that jumps from one side of the field to the other between frames is worse than
+        // none: the pose estimator swallows it and drags the robot along with it.
         runLoops(20);
         Pose3d first = limelight.lastFrame().megaTag1Pose().orElseThrow();
 
@@ -129,6 +129,6 @@ class Field2026SolveTest {
                 0.0,
                 first.getTranslation().getDistance(later.getTranslation()),
                 0.20,
-                "el robot no se movio, la solucion tampoco deberia");
+                "the robot did not move, so neither should the solution");
     }
 }

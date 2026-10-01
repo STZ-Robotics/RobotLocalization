@@ -15,15 +15,15 @@ import org.junit.jupiter.api.Test;
 import java.util.Random;
 
 /**
- * Fija la semantica del marco de origen del headset. Es el equivalente en esta feature a los tests
- * de signo de {@code tx} en la Limelight simulada: si esto se invierte, el robot code se localiza al
- * reves y no hay ningun error visible en ninguna parte.
+ * Pins down the semantics of the headset's origin frame. It is this feature's equivalent of the
+ * {@code tx} sign tests in the simulated Limelight: if this gets inverted, the robot code localises
+ * backwards and there is no visible error anywhere.
  */
 class QuestOriginFrameTest {
 
     private static final double EPS = 1e-9;
 
-    /** El mount real de STZ: 33.2 cm a la derecha del centro y girado -90 grados. */
+    /** STZ's real mount: 33.2 cm right of centre and rotated -90 degrees. */
     private static final Transform3d ROBOT_TO_QUEST =
             new Transform3d(
                     new Translation3d(0.0, -0.332, 0.0),
@@ -43,7 +43,7 @@ class QuestOriginFrameTest {
 
     @Test
     void anArbitraryOriginMakesTheReportedPoseDifferFromTheFieldPose() {
-        // Es el caso real: el Quest arranca donde arranca, no en la esquina azul del campo.
+        // This is the real case: the Quest starts where it starts, not at the field's blue corner.
         QuestOriginFrame frame =
                 new QuestOriginFrame(new Pose3d(1.0, 2.0, 0.0, new Rotation3d(0.0, 0.0, 0.7)));
         Pose3d headset = new Pose3d(3.0, 4.0, 0.0, Rotation3d.kZero);
@@ -71,9 +71,9 @@ class QuestOriginFrameTest {
 
     @Test
     void afterAResetTheRobotPoseRoundTripsThroughTheMountTransform() {
-        // Esto es literalmente lo que hace el robot code: pide un reset a robotPose ⊕ ROBOT_TO_QUEST
-        // y luego deshace el mount sobre lo que recibe. Si la composicion esta mal, el error aparece
-        // aqui y no en competencia.
+        // This is literally what the robot code does: it asks for a reset to robotPose ⊕
+        // ROBOT_TO_QUEST and then undoes the mount on what it receives. If the composition is wrong,
+        // the error shows up here and not at competition.
         QuestOriginFrame frame = QuestOriginFrame.randomized(3.0, 90.0, new Random(11));
         Pose3d robotInField = new Pose3d(6.0, 3.0, 0.0, new Rotation3d(0.0, 0.0, 0.9));
         Pose3d headsetInField = robotInField.transformBy(ROBOT_TO_QUEST);

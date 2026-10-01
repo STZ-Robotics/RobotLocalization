@@ -14,10 +14,11 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * El arbitraje entre fuentes que se contradicen.
+ * Arbitration between sources that contradict each other.
  *
- * <p>Estaba metido dentro del bucle de actualizacion y no habia forma de probarlo sin montar fuentes
- * y NetworkTables. Sacarlo a su clase era la mitad del trabajo; esta es la otra mitad.
+ * <p>It used to be buried inside the update loop and there was no way to test it without standing up
+ * sources and NetworkTables. Pulling it out into its own class was half the work; this is the other
+ * half.
  */
 class ConsensusGateTest {
 
@@ -48,7 +49,7 @@ class ConsensusGateTest {
 
     @Test
     void twoSourcesThatDisagreeAreBothRejected() {
-        // Con dos fuentes no hay quien desempate: creerle a una es apostar.
+        // With two sources there is nobody to break the tie: believing one is a gamble.
         ConsensusGate.Result result =
                 gate().evaluate(List.of(at("a", 0.0, 1.0), at("b", 3.0, 1.0)), 0.0);
 
@@ -69,12 +70,12 @@ class ConsensusGateTest {
                                         at("outlier", 5.0, 1.0)),
                                 0.0);
 
-        assertEquals(Set.of(3), result.rejected(), "solo la discrepante deberia caer");
+        assertEquals(Set.of(3), result.rejected(), "only the dissenting one should fall");
     }
 
     @Test
     void majorityVoteRejectsEveryoneOnAnEvenSplit() {
-        // Dos contra dos: la evidencia no alcanza para elegir bando.
+        // Two against two: the evidence is not enough to pick a side.
         ConsensusGate.Result result =
                 gate().withMode(ConsensusGate.Mode.MAJORITY_VOTE)
                         .evaluate(
@@ -90,8 +91,8 @@ class ConsensusGateTest {
 
     @Test
     void supportIsCountedAcrossAllSourcesNotJustTheDisputedOnes() {
-        // 'a' discute solo con 'far', pero la respaldan tres fuentes que no estan en disputa. Ese
-        // respaldo tiene que contar: es lo que significa tener mayoria.
+        // 'a' only argues with 'far', but three sources that are not in dispute back it up. That
+        // backing has to count: it is what having a majority means.
         ConsensusGate.Result result =
                 gate().withMode(ConsensusGate.Mode.MAJORITY_VOTE)
                         .evaluate(
@@ -103,12 +104,12 @@ class ConsensusGateTest {
                                         at("far", 1.5, 1.0)),
                                 0.0);
 
-        assertEquals(Set.of(4), result.rejected(), "la fuente sin respaldo es la que sobra");
+        assertEquals(Set.of(4), result.rejected(), "the unsupported source is the odd one out");
     }
 
     @Test
     void samplesTooFarApartInTimeAreNotCompared() {
-        // Medio segundo de diferencia describe dos momentos distintos, no un desacuerdo.
+        // Half a second apart describes two different moments, not a disagreement.
         ConsensusGate.Result result =
                 gate().evaluate(List.of(at("a", 0.0, 1.0), at("b", 3.0, 1.5)), 0.0);
 
@@ -118,13 +119,13 @@ class ConsensusGateTest {
 
     @Test
     void motionWidensTheToleranceByHowFarTheRobotCouldHaveMoved() {
-        // 0.08 s de separacion y 0.6 m de diferencia: con el robot quieto es un desacuerdo...
+        // 0.08 s apart and 0.6 m of difference: with the robot still that is a disagreement...
         List<ConsensusGate.Candidate> candidates = List.of(at("a", 0.0, 1.0), at("b", 0.6, 1.08));
 
         assertEquals(Set.of(0, 1), gate().evaluate(candidates, 0.0).rejected());
 
-        // ...pero a 4 m/s el robot recorre 0.32 m en ese tiempo, asi que 0.6 m entra dentro de lo
-        // explicable y las dos fuentes sobreviven.
+        // ...but at 4 m/s the robot covers 0.32 m in that time, so 0.6 m falls within what can be
+        // explained and both sources survive.
         assertTrue(gate().evaluate(candidates, 4.0).rejected().isEmpty());
     }
 
